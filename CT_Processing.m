@@ -13,9 +13,14 @@ function CT_Processing
     handles.gui.figObject = figObject;
     handles.gui.informationTextsObjects = informationTextsObjects;
     handles.gui.menuObjects = menuObjects;
-    handles.gui = guihandles(figObject);
+    handles.gui.sliderBarObjects = createSlideBarObjects(figObject);
+    handles.gui = guihandles(figObject);  
     guidata(figObject, handles);
 end
+
+
+%%%%%%%%%%%% GUI RELATED FUNCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function figObject = createMainFigure()
     %Get the screen size
@@ -25,7 +30,9 @@ function figObject = createMainFigure()
         'NumberTitle', 'Off',...
         'Name', 'New CT Processing V 0.0.1dev',...
         'Position', screenSize,...
-        'WindowScrollWheelFcn', @refreshSlicePosition);  
+        'Color', 'black',...
+        'WindowScrollWheelFcn', @refreshSlicePosition,...
+        'WindowButtonMotionFcn', @mouseMove);  
 
 end
 
@@ -36,7 +43,8 @@ function navigationAxesObjectStructure = createNavigationAxes(parentFigureObject
       'Position', [0.2, 0.15, 0.6, 0.8],...
       'Color', 'black',...
       'XtickLabel', '',...
-      'YtickLabel', '');
+      'YtickLabel', '',...
+      'Tag', 'navigationAxes');
 
   navigationAxesObjectStructure.informationAxesObject = axes('Parent', parentFigureObject,...
       'Units', 'Normalized',...
@@ -49,16 +57,32 @@ function navigationAxesObjectStructure = createNavigationAxes(parentFigureObject
 end
 
 function informationTextsObjectsStructure = createInformationTexts(parentAxesObject)
-    informationTextsObjectsStructure.slicePosition = text(0.01, 0.02, '1/100',...
+
+    informationTextsObjectsStructure.patientName = text(0.5, 0.98, 'Patient''s Name',...
+        'Color', 'white',...
+        'Fontsize', 12,...
+        'Fontweight', 'bold',...
+        'Tag', 'patientNameTag',...
+        'HorizontalAlignment', 'center');
+    
+    informationTextsObjectsStructure.slicePosition = text(0.01, 0.02, '1/-',...
         'Color', 'white',...
         'Fontsize', 12,...
         'Fontweight', 'bold',...
         'Tag', 'slicePositionTag');
     
-    informationTextsObjectsStructure.patientName = text(0.45, 0.98, 'Patient''s Name',...
+    informationTextsObjectsStructure.numberOfRows = text(0.01, 0.06, 'Image Size: -',...
         'Color', 'white',...
         'Fontsize', 12,...
-        'Fontweight', 'bold');
+        'Fontweight', 'bold',...
+        'Tag', 'numberOfRowsTag');     
+
+
+    informationTextsObjectsStructure.pixelValue = text(0.14, 0.02, 'Pixel Value = -',...
+        'Color', 'white',...
+        'Fontsize', 12,...
+        'Fontweight', 'bold',...
+        'Tag', 'pixelValueTag');
 end
 
 function menuObjectsStructure = createMenuObjects(parentFigureObject)
@@ -72,19 +96,81 @@ function menuObjectsStructure = createMenuObjects(parentFigureObject)
         'Label', 'Open Frame',...
         'Acc', 'O',...
         'Callback', @openDicom);
+    %Load Masks Menu
+    menuObjectsStructure.loadFrame = uimenu('Parent', openGroup,...
+        'Label', 'Open Masks',...
+        'Acc', 'M',...
+        'Callback', @openMask);
+    
     %Quit Menu
     menuObjectsStructure.quitMenu = uimenu('Parent', menuObjectsStructure.fileMenu,...
         'Label', 'Quit',...        
         'Callback', '');
 end
 
+function slideBarObjectsStructure = createSlideBarObjects(parentFigureObject)
+    slideBarObjectsStructure.windowWidth = uicontrol('Parent', parentFigureObject,...
+        'Style', 'Slider',...
+        'Units', 'Normalized',...
+        'Position', [0.8, 0.45, 0.1, 0.2],...
+        'Tag', 'windowWidthSlider',...
+        'Callback', @windowWidthCallback);
+    
+    slideBarObjectsStructure.windowCenter= uicontrol('Parent', parentFigureObject,...
+        'Style', 'Slider',...
+        'Units', 'Normalized',...
+        'Position', [0.86, 0.45, 0.1, 0.2],...
+        'Tag', 'windowCenterSlider',...
+        'Callback', @windowCenterCallback);
+    
+    slideBarObjectsStructure.windowWidthText = uicontrol('Parent',parentFigureObject,...
+        'Style', 'Text',...
+        'Units', 'Normalized',...
+        'Position', [0.878, 0.67, 0.03, 0.02],...
+        'HorizontalAlignment', 'Center',...        
+        'String', '0');
+    
+    slideBarObjectsStructure.windowWidthText = uicontrol('Parent',parentFigureObject,...
+        'Style', 'Text',...
+        'Units', 'Normalized',...
+        'Position', [0.937, 0.67, 0.03, 0.02],...
+        'HorizontalAlignment', 'Center',...
+        'String', '0');
+
+end
+
+%%%%%%%%%%%% GUI RELATED FUNCTIONS  - END %%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+function displayCurrentDicom(handles, dicomImage, slicePosition)
+axes(handles.gui.navigationAxes)
+imagesc(dicomImage(:, :, slicePosition))
+colormap(gray)
+end
+
+function refreshPatientsInfo(handles, info)
+   patientName = info.PatientName.FamilyName;
+   %Check if Patient has Give Name
+   if isfield(info.PatientName, 'GivenName')
+       patientName = [info.PatientName.GivenName ' ' patientName];
+   end
+   set(handles.gui.patientNameTag, 'String', patientName)
+   set(handles.gui.numberOfRowsTag, 'String', sprintf('Image Size: %d x %d', info.Rows, info.Columns));
+   end
+
 function refreshSlicePosition(hObject, eventdata)
 
-    nSlices = 100;
-    slicePositionPlaceHolder = '%d/%d';
+   
+slicePositionPlaceHolder = '%d/%d';
 
-    handles = guidata(hObject);
-    currentSlicePosition = get(handles.gui.slicePositionTag, 'String'); 
+handles = guidata(hObject);
+
+if isfield(handles, 'data')
+    
+    nSlices = size(handles.data.dicomImage, 3);
+    
+    currentSlicePosition = get(handles.gui.slicePositionTag, 'String');
     
     %Get the new slice position based on the displayed values using regexp
     newSlicePosition = getSlicePosition(currentSlicePosition,...
@@ -98,11 +184,18 @@ function refreshSlicePosition(hObject, eventdata)
     %number of slices
     if ~newSlicePosition && eventdata.VerticalScrollCount < 0
         newSlicePosition = nSlices;
+    elseif ~newSlicePosition && eventdata.VerticalScrollCount > 0
+        newSlicePosition = 1;
     end
     
     %Refresh slice position information.
     set(handles.gui.slicePositionTag, 'String',...
         sprintf(slicePositionPlaceHolder, newSlicePosition, nSlices));
+    displayCurrentDicom(handles, handles.data.dicomImage, newSlicePosition);
+    
+    %Refresh pixel value information.
+    refreshPixelPositionInfo(handles, handles.gui.navigationAxes)
+end
 end
 
 function newSlicePosition = getSlicePosition(slicePositionString, direction)
@@ -161,11 +254,68 @@ function openDicom(hObject, eventdata)
         
         set(handles.gui.mainFig,'Pointer','arrow'); drawnow('expose');
         
+        %Display First Slice
+        displayCurrentDicom(handles, dicomImage, 1);
+        %Display Patients Information
+        refreshPatientsInfo(handles, info)
+        
         handles.data.dicomImage = dicomImage;
         guidata(hObject, handles)
     end
 end
 
+
+function mouseMove(hObject, eventdata)
+    handles = guidata(hObject);
+    mainAxes = handles.gui.navigationAxes;
+    refreshPixelPositionInfo(handles, mainAxes);    
+end
+
+function refreshPixelPositionInfo(handles, mainAxes)
+
+if isfield(handles, 'data')
+    C = get(mainAxes,'currentpoint');
+    
+    xlim = get(mainAxes,'xlim');
+    ylim = get(mainAxes,'ylim');
+    
+    row = C(1);
+    col = round(C(1, 2));
+    
+    
+    
+    %Check if pointer is inside Navigation Axes.
+    outX = ~any(diff([xlim(1) C(1,1) xlim(2)])<0);
+    outY = ~any(diff([ylim(1) C(1,2) ylim(2)])<0);
+    if outX && outY
+        %Get the current Slice
+        currentSlicePositionString = get(handles.gui.slicePositionTag, 'String');
+        tempSlicePosition = regexp(currentSlicePositionString, '/', 'split');
+        slicePosition = str2double(tempSlicePosition(1));
+        
+        currentSlice = handles.data.dicomImage(:, :, slicePosition);
+        
+        pixelValue = currentSlice(col, row);
+        
+        set(handles.gui.pixelValueTag, 'String', sprintf('Pixel Value = %.2f', double(pixelValue)))
+    else
+        set(handles.gui.pixelValueTag, 'String', sprintf('Pixel Value = -'))
+    end
+    
+end
+end
+
+function windowWidthCallback(hObject, eventdata)
+    handles = guidata(hObject);
+    windowWidth = get(handles.gui.windowWidthSlider, 'Value');
+
+end
+
+function windowCenterCallback(hObject, eventdata)
+    handles = guidata(hObject);
+    windowCenter = get(handles.gui.windowCenterSlider, 'Value');
+
+end
 
 %%%%%%%%% External Functions %%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -189,7 +339,6 @@ if(nf>1)
     % Initialize voxelvolume
     voxelvolume=zeros(info.Dimensions,class(voxelvolume));
     % Convert dicom images to voxel volume
-    cla(gca)
     h = waitbar(0,'Please wait...');
     for i=1:nf,
         waitbar(i/nf,h)
