@@ -8,12 +8,10 @@ function CT_Processing
     informationTextsObjects = createInformationTexts(navigationAxesObjects.informationAxesObject);
     
     %Create Menus
-    menuObjects = createMenuObjects(figObject);
+    createMenuObjects(figObject);
     
-    handles.gui.figObject = figObject;
-    handles.gui.informationTextsObjects = informationTextsObjects;
-    handles.gui.menuObjects = menuObjects;
-    handles.gui.sliderBarObjects = createSlideBarObjects(figObject);
+
+    createControlSideBar(figObject);
     handles.gui = guihandles(figObject);  
     guidata(figObject, handles);
 end
@@ -40,7 +38,7 @@ function navigationAxesObjectStructure = createNavigationAxes(parentFigureObject
 
     navigationAxesObjectStructure.navigationAxesObject = axes('Parent', parentFigureObject,...
       'Units', 'Normalized',...
-      'Position', [0.2, 0.15, 0.6, 0.8],...
+      'Position', [0.16, 0.15, 0.6, 0.8],...
       'Color', 'black',...
       'XtickLabel', '',...
       'YtickLabel', '',...
@@ -48,7 +46,7 @@ function navigationAxesObjectStructure = createNavigationAxes(parentFigureObject
 
   navigationAxesObjectStructure.informationAxesObject = axes('Parent', parentFigureObject,...
       'Units', 'Normalized',...
-      'Position', [0.15, 0.08, 0.7, 0.9],...
+      'Position', [0.11, 0.08, 0.7, 0.9],...
       'XtickLabel', '',...
       'YtickLabel', '',...
       'Color', 'black');
@@ -63,18 +61,21 @@ function informationTextsObjectsStructure = createInformationTexts(parentAxesObj
         'Fontsize', 12,...
         'Fontweight', 'bold',...
         'Tag', 'patientNameTag',...
-        'HorizontalAlignment', 'center');
+        'HorizontalAlignment', 'center',...
+        'Visible', 'Off');
     
     informationTextsObjectsStructure.slicePosition = text(0.01, 0.02, '1/-',...
         'Color', 'white',...
         'Fontsize', 12,...
         'Fontweight', 'bold',...
+        'Visible', 'Off',...
         'Tag', 'slicePositionTag');
     
     informationTextsObjectsStructure.numberOfRows = text(0.01, 0.06, 'Image Size: -',...
         'Color', 'white',...
         'Fontsize', 12,...
         'Fontweight', 'bold',...
+        'Visible', 'Off',...
         'Tag', 'numberOfRowsTag');     
 
 
@@ -82,71 +83,105 @@ function informationTextsObjectsStructure = createInformationTexts(parentAxesObj
         'Color', 'white',...
         'Fontsize', 12,...
         'Fontweight', 'bold',...
+        'Visible', 'Off',...
         'Tag', 'pixelValueTag');
 end
 
-function menuObjectsStructure = createMenuObjects(parentFigureObject)
+function createMenuObjects(parentFigureObject)
     %Create Menu Objects
     
-    menuObjectsStructure.fileMenu = uimenu('Parent', parentFigureObject,...
+    
+    %%%FILE MENU
+    fileMenu = uimenu('Parent', parentFigureObject,...
         'Label', 'File');
-    openGroup = uimenu('Parent', menuObjectsStructure.fileMenu, 'Label', 'Open');
+    openGroup = uimenu('Parent', fileMenu, 'Label', 'Open');
     %Load Frame Menu
-    menuObjectsStructure.loadFrame = uimenu('Parent', openGroup,...
+    uimenu('Parent', openGroup,...
         'Label', 'Open Frame',...
         'Acc', 'O',...
         'Callback', @openDicom);
     %Load Masks Menu
-    menuObjectsStructure.loadFrame = uimenu('Parent', openGroup,...
+    uimenu('Parent', openGroup,...
         'Label', 'Open Masks',...
         'Acc', 'M',...
-        'Callback', @openMask);
-    
+        'Enable', 'Off',...
+        'Tag', 'openMaskMenu',...
+        'Callback', @openMask);    
     %Quit Menu
-    menuObjectsStructure.quitMenu = uimenu('Parent', menuObjectsStructure.fileMenu,...
+    uimenu('Parent', fileMenu,...
         'Label', 'Quit',...        
         'Callback', '');
+    
+    %%%ANALYSIS MENU
+    analysisMenu = uimenu('Parent', parentFigureObject,...
+        'Label', 'Analysis');
+    
+    uimenu('Parent', analysisMenu,...
+        'Label', 'Mass and Volume',...
+        'Callback', @massAndVolumeCalculation,...
+        'Enable', 'Off',...
+        'Tag', 'massAndVolumeCalculation')
+    
 end
 
-function slideBarObjectsStructure = createSlideBarObjects(parentFigureObject)
-    slideBarObjectsStructure.windowWidth = uicontrol('Parent', parentFigureObject,...
+function createControlSideBar(parentFigureObject)
+    mainPanel = uipanel('Parent', parentFigureObject,...
+        'Units', 'Normalized',...
+        'Position', [0.8, 0, 0.2, 1],...'
+        'BackGroundColor', 'black',...
+        'Visible', 'Off',...
+        'Tag', 'sideBarMainPanel');
+    
+     uicontrol('Parent', mainPanel,...
         'Style', 'Slider',...
         'Units', 'Normalized',...
-        'Position', [0.8, 0.45, 0.1, 0.2],...
+        'Position', [0.1, 0.45, 0.1, 0.2],...
         'Tag', 'windowWidthSlider',...
         'Callback', @windowWidthCallback);
     
-    slideBarObjectsStructure.windowCenter= uicontrol('Parent', parentFigureObject,...
+    uicontrol('Parent', mainPanel,...
         'Style', 'Slider',...
         'Units', 'Normalized',...
-        'Position', [0.86, 0.45, 0.1, 0.2],...
+        'Position', [0.35, 0.45, 0.1, 0.2],...
         'Tag', 'windowCenterSlider',...
         'Callback', @windowCenterCallback);
     
-    slideBarObjectsStructure.windowWidthText = uicontrol('Parent',parentFigureObject,...
+     uicontrol('Parent',mainPanel,...
         'Style', 'Text',...
         'Units', 'Normalized',...
-        'Position', [0.878, 0.67, 0.03, 0.02],...
+        'Position', [0.12, 0.67, 0.11, 0.02],...
         'HorizontalAlignment', 'Center',...        
-        'String', '0');
+        'String', '0',...
+        'BackGroundColor', 'black',...
+        'ForeGroundColor', 'white',...
+        'Tag', 'windowWidthText');
     
-    slideBarObjectsStructure.windowWidthText = uicontrol('Parent',parentFigureObject,...
+     uicontrol('Parent',mainPanel,...
         'Style', 'Text',...
         'Units', 'Normalized',...
-        'Position', [0.937, 0.67, 0.03, 0.02],...
+        'Position', [0.37, 0.67, 0.11, 0.02],...
         'HorizontalAlignment', 'Center',...
-        'String', '0');
-
+        'String', '0',...
+        'BackGroundColor', 'black',...
+        'ForeGroundColor', 'white',...
+        'Tag', 'windowCenterText');
+    
+    uicontrol('Parent', mainPanel,...
+        'Units', 'Normalized',...
+        'Position', [0.48, 0.45, 0.28, 0.06],...
+        'String', 'Reset',...
+        'Callback', @resetWindowWidthCenter);
 end
 
 %%%%%%%%%%%% GUI RELATED FUNCTIONS  - END %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-function displayCurrentDicom(handles, dicomImage, slicePosition)
-axes(handles.gui.navigationAxes)
-imagesc(dicomImage(:, :, slicePosition))
-colormap(gray)
+function handles = displayCurrentDicom(handles, dicomImage, slicePosition)
+    axes(handles.gui.navigationAxes)
+    handles.gui.imagePlot = imagesc(dicomImage(:, :, slicePosition));
+    set(handles.gui.navigationAxes, 'Clim', [handles.data.displayLow, handles.data.displayHigh]);
+    colormap(gray)
 end
 
 function refreshPatientsInfo(handles, info)
@@ -191,10 +226,12 @@ if isfield(handles, 'data')
     %Refresh slice position information.
     set(handles.gui.slicePositionTag, 'String',...
         sprintf(slicePositionPlaceHolder, newSlicePosition, nSlices));
-    displayCurrentDicom(handles, handles.data.dicomImage, newSlicePosition);
+    handles = displayCurrentDicom(handles, handles.data.dicomImage, newSlicePosition);
     
     %Refresh pixel value information.
     refreshPixelPositionInfo(handles, handles.gui.navigationAxes)
+    
+    guidata(hObject, handles)
 end
 end
 
@@ -223,6 +260,7 @@ function openDicom(hObject, eventdata)
         found = false;
         counter = 0;
         
+        %Create a function to insert this piece of code.
         while ~found
             counter =  counter + 1;
             fileName = listOfFiles(counter).name;
@@ -230,7 +268,7 @@ function openDicom(hObject, eventdata)
                 completeFileName = [dirPath filesep fileName];
                 %Try to discover if files without extension are Dicom files
                 try
-                    dicominfo(completeFileName);
+                    handles.data.metadata = dicominfo(completeFileName);
                     info = dicom_read_header(completeFileName);
                     
                     found = true;
@@ -254,16 +292,50 @@ function openDicom(hObject, eventdata)
         
         set(handles.gui.mainFig,'Pointer','arrow'); drawnow('expose');
         
+                
+        handles.data.dicomImage = dicomImage;
+        
+        %Set the Window Width and Window Center
+        [handles.data.displayLow, handles.data.displayHigh] =...
+            calculateWindowWidthAndCenter(handles);
+        
+        configureSliders(handles)
+        
         %Display First Slice
-        displayCurrentDicom(handles, dicomImage, 1);
+        handles = displayCurrentDicom(handles, dicomImage, 1);
+        
         %Display Patients Information
         refreshPatientsInfo(handles, info)
         
-        handles.data.dicomImage = dicomImage;
+        %Update Interface Appearene
+        hideShowImageInformation(handles, 'On')
+        hideShowSideBar(handles, 'On')
+        set(handles.gui.openMaskMenu, 'Enable', 'On')        
+
+        set(handles.gui.navigationAxes, 'Clim',...
+            [handles.data.displayLow, handles.data.displayHigh])
+        
         guidata(hObject, handles)
     end
 end
 
+function openMask(hObject, eventdata)
+[FileName PathName] = uigetfile('*.hdr', 'Select the file containing the masks');
+
+if FileName
+    handles = guidata(hObject);
+    fileName = [PathName FileName];
+    masks = analyze75read(fileName);
+    handles.data.masks = masks;
+    guidata(hObject, handles)
+    
+    
+    %UPDATE MENU
+    set(handles.gui.massAndVolumeCalculation, 'Enable', 'On')
+    
+end
+
+end
 
 function mouseMove(hObject, eventdata)
     handles = guidata(hObject);
@@ -279,7 +351,7 @@ if isfield(handles, 'data')
     xlim = get(mainAxes,'xlim');
     ylim = get(mainAxes,'ylim');
     
-    row = C(1);
+    row = round(C(1));
     col = round(C(1, 2));
     
     
@@ -308,14 +380,140 @@ end
 function windowWidthCallback(hObject, eventdata)
     handles = guidata(hObject);
     windowWidth = get(handles.gui.windowWidthSlider, 'Value');
+    windowCenter = get(handles.gui.windowCenterSlider, 'Value');
+    
+    set(handles.gui.windowWidthText, 'String',sprintf('%.2f', windowWidth));
+    [displayLow, displayHigh] = calculateWindowWidthAndCenter(handles,...
+        windowWidth, windowCenter);
+    
+    set(handles.gui.navigationAxes, 'Clim', [displayLow displayHigh])
+    
+    handles.data.displayLow = displayLow;
+    handles.data.displayHigh = displayHigh;
+    
+    guidata(hObject, handles);
 
 end
 
 function windowCenterCallback(hObject, eventdata)
     handles = guidata(hObject);
+    windowWidth = get(handles.gui.windowWidthSlider, 'Value');
     windowCenter = get(handles.gui.windowCenterSlider, 'Value');
+    set(handles.gui.windowCenterText, 'String',sprintf('%.2f', windowCenter));
+    
+    [displayLow, displayHigh] = calculateWindowWidthAndCenter(handles,...
+        windowWidth, windowCenter);
+    
+    set(handles.gui.navigationAxes, 'Clim', [displayLow displayHigh])
+    
+    handles.data.displayLow = displayLow;
+    handles.data.displayHigh = displayHigh;
+    
+    guidata(hObject, handles);
 
 end
+
+function resetWindowWidthCenter(hObject, eventdata)
+    handles = guidata(hObject);
+    
+    windowWidth = handles.data.metadata.WindowWidth(1);
+    windowCenter = handles.data.metadata.WindowCenter(1);
+    
+    [handles.data.displayLow, handles.data.displayHigh] =...
+        calculateWindowWidthAndCenter(handles, windowWidth, windowCenter);
+    set(handles.gui.navigationAxes, 'Clim', ...
+        [handles.data.displayLow, handles.data.displayHigh]);
+    set(handles.gui.windowWidthSlider, 'Value', windowWidth);
+    set(handles.gui.windowCenterSlider, 'Value', windowCenter);
+    guidata(hObject, handles)
+    
+end
+
+function hideShowSideBar(handles, hideOrShow)
+    set(handles.gui.sideBarMainPanel, 'Visible', hideOrShow)
+end
+
+function hideShowImageInformation(handles, hideOrShow)
+    set(handles.gui.patientNameTag, 'Visible', hideOrShow)
+    set(handles.gui.slicePositionTag, 'Visible', hideOrShow)
+    set(handles.gui.numberOfRowsTag, 'Visible', hideOrShow)
+    set(handles.gui.pixelValueTag, 'Visible', hideOrShow)
+end
+
+%%%%%%%%%%%%% ANALYSIS CALLBACKS %%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function massAndVolumeCalculation(hObject, eventdata)
+    handles = guidata(hObject);
+    
+    lung = handles.data.dicomImage;
+    masks = handles.data.masks;
+    metadata = handles.data.metadata;
+    
+    %Default HU values - will be able to be changed in the future.
+    hyperRange = [-1000 -900];
+    normallyRange = [-900 -500];
+    poorlyRange = [-500 -100];
+    nonRange = [-100 100];
+    
+    
+    %Calculates the Volume.
+    volumeCalculation(lung, masks, metadata, hyperRange, normallyRange,...
+    poorlyRange, nonRange)
+    
+    
+    
+end
+
+function volumeCalculation(lung, masks, metadata, hyperRange, normallyRange,...
+    poorlyRange, nonRange)
+ 
+    voxelVolume = calculateVoxelVolume(metadata);
+    
+    if ~isnan(voxelVolume)
+        hyperVolume = length(lung(lung >= hyperRange(1) &...
+            lung < hyperRange(2))) * voxelVolume;
+        
+        normallyVolume = length(lung(lung >= normallyRange(1) &...
+            lung < normallyRange(2))) * voxelVolume;
+        
+        poorlyVolume = length(lung(lung >= poorlyRange(1) &...
+            lung < poorlyRange(2))) * voxelVolume;
+        
+        nonVolume = length(lung(lung >= nonRange(1) &...
+            lung < nonRange(2))) * voxelVolume;
+        
+        totalLungVolume = hyperVolume + normallyVolume + poorlyVolume + ...
+            nonVolume;
+    end
+
+
+end
+
+function voxelVolume = calculateVoxelVolume(metadata)
+    
+    voxelVolume = NaN;
+    
+    if isfield(metadata,'SpacingBetweenSlices');
+        if isfield(metadata,'SliceThickness')
+            voxelVolume = (metadata.PixelSpacing(1) ^ 2 * metadata.SliceThickness * 0.001) *...
+                (metadata.SpacingBetweenSlices / metadata.SliceThickness);
+        else
+            voxelVolume = (metadata.PixelSpacing(1) ^ 2 *...
+                metadata.SliceThickness * 0.001);
+        end
+    end
+    
+end
+
+
+
+
+
+
+
+
+
 
 %%%%%%%%% External Functions %%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -352,6 +550,43 @@ if(nf>1)
     close(h);
 end
 
+end
+
+function [displayLow, displayHigh] = calculateWindowWidthAndCenter(handles,...
+    windowWidth, windowCenter)
+
+if nargin == 1
+    %Get the Window Width and Window Center Information
+    windowWidth = handles.data.metadata.WindowWidth(1);
+    windowCenter = handles.data.metadata.WindowCenter(1);
+end
+
+%Calculate the Window Width and Information parameters
+displayLow = max(windowCenter - 0.5 * windowWidth,...
+    min(double(handles.data.dicomImage(:))));
+
+displayHigh = max(windowCenter + 0.5 * windowWidth,...
+    min(double(handles.data.dicomImage(:))));
+end
+
+function configureSliders(handles)
+dicomImage = handles.data.dicomImage;
+
+windowWidth = handles.data.metadata.WindowWidth(1);
+windowCenter = handles.data.metadata.WindowCenter(1);
+
+%Width Configuration
+ctRange = double(max(dicomImage(:)) - min(dicomImage(:)));
+set(handles.gui.windowWidthSlider, 'Max', ctRange);
+set(handles.gui.windowWidthSlider, 'Min', 1);
+set(handles.gui.windowWidthSlider, 'Value', windowWidth);
+set(handles.gui.windowWidthSlider, 'sliderstep', [1 1] / ctRange);
+
+%Center Configuration
+set(handles.gui.windowCenterSlider, 'Max', max(dicomImage(:)));
+set(handles.gui.windowCenterSlider, 'Min', min(dicomImage(:)));
+set(handles.gui.windowCenterSlider, 'Value', windowCenter);
+set(handles.gui.windowCenterSlider, 'sliderstep', [1 1] / ctRange);
 end
 
 
