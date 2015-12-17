@@ -252,8 +252,7 @@ function openDicom(hObject, eventdata)
     if dirPath
         
         %Display Wait window
-        figObj = createLogFrame();
-        
+        figObj = createLogFrame();        
         displayLog(figObj, sprintf('%s', 'Loading Images...'), 0)
         
         handles = guidata(hObject);
@@ -338,6 +337,11 @@ handles = guidata(hObject);
     'Select the file containing the masks', handles.data.dicomImagePath);
 
 if FileName
+    
+    %Display Wait window
+    figObj = createLogFrame();
+    displayLog(figObj, sprintf('%s', 'Loading Masks...'), 0)
+    
     handles = guidata(hObject);
     fileName = [PathName FileName];
     masks = analyze75read(fileName);
@@ -347,6 +351,9 @@ if FileName
     
     %UPDATE MENU
     set(handles.gui.massAndVolumeCalculation, 'Enable', 'On')
+    
+    %Close wait window
+    close(figObj);
     
 end
 
@@ -484,10 +491,10 @@ function massAndVolumeCalculation(hObject, eventdata)
     %Prealocate
     nSlices = size(lungWithMask, 3);
     
-    hyperVolumePerSilce = zeros(1, nSlices);
-    normallyVolumePerSilce = zeros(1, nSlices);
-    poorlyVolumePerSilce = zeros(1, nSlices);
-    nonVolumePerSilce = zeros(1, nSlices);
+    hyperVolumePerSlice = zeros(1, nSlices);
+    normallyVolumePerSlice = zeros(1, nSlices);
+    poorlyVolumePerSlice = zeros(1, nSlices);
+    nonVolumePerSlice = zeros(1, nSlices);
     totalSliceVolume = zeros(1, nSlices);
     percentualHyperVolumePerSlice = zeros(1, nSlices); 
     percentualNormallyVolumePerSlice = zeros(1, nSlices);
@@ -500,8 +507,8 @@ function massAndVolumeCalculation(hObject, eventdata)
         %Get the jth Slice.
         sliceWithMask = lungWithMask(:, :, jSlice);
         
-        [hyperVolumePerSilce(jSlice), normallyVolumePerSilce(jSlice),...
-            poorlyVolumePerSilce(jSlice), nonVolumePerSilce(jSlice),...
+        [hyperVolumePerSlice(jSlice), normallyVolumePerSlice(jSlice),...
+            poorlyVolumePerSlice(jSlice), nonVolumePerSlice(jSlice),...
             totalSliceVolume(jSlice), percentualHyperVolumePerSlice(jSlice),...
             percentualNormallyVolumePerSlice(jSlice),...
             percentualPoorlyVolumePerSlice(jSlice),...
@@ -525,10 +532,10 @@ function massAndVolumeCalculation(hObject, eventdata)
     
         %Calculate the Volume Slice by Slice.
     %Prealocate
-    hyperMassPerSilce = zeros(1, nSlices);
-    normallyMassPerSilce = zeros(1, nSlices);
-    poorlyMassPerSilce = zeros(1, nSlices);
-    nonMassPerSilce = zeros(1, nSlices);
+    hyperMassPerSlice = zeros(1, nSlices);
+    normallyMassPerSlice = zeros(1, nSlices);
+    poorlyMassPerSlice = zeros(1, nSlices);
+    nonMassPerSlice = zeros(1, nSlices);
     totalSliceMass = zeros(1, nSlices);
     percentualHyperMassPerSlice = zeros(1, nSlices);
     percentualNormallyMassPerSlice = zeros(1, nSlices);
@@ -540,8 +547,8 @@ function massAndVolumeCalculation(hObject, eventdata)
         %Get the jth Slice.
         sliceWithMask = lungWithMask(:, :, jSlice);
         
-        [hyperMassPerSilce(jSlice), normallyMassPerSilce(jSlice),...
-            poorlyMassPerSilce(jSlice), nonMassPerSilce(jSlice),...
+        [hyperMassPerSlice(jSlice), normallyMassPerSlice(jSlice),...
+            poorlyMassPerSlice(jSlice), nonMassPerSlice(jSlice),...
             totalSliceMass(jSlice), percentualHyperMassPerSlice(jSlice),...
             percentualNormallyMassPerSlice(jSlice),...
             percentualPoorlyMassPerSlice(jSlice),...
@@ -551,8 +558,51 @@ function massAndVolumeCalculation(hObject, eventdata)
         
     end
     
+    %Store the indices.
+    %Volume
+    massAndVolumeResults.totalLungVolume = totalLungVolume;
+    massAndVolumeResults.hyperVolume = hyperVolume;
+    massAndVolumeResults.poorlyVolume = poorlyVolume;
+    massAndVolumeResults.normallyVolume = normallyVolume;
+    massAndVolumeResults.nonVolume = nonVolume;
+    massAndVolumeResults.percentualHyperVolume = percentualHyperVolume;
+    massAndVolumeResults.percentualNormallyVolume = percentualNormallyVolume;
+    massAndVolumeResults.percentualPoorlyVolume = percentualPoorlyVolume;
+    massAndVolumeResults.percentualNonVolume = percentualNonVolume;       
+    massAndVolumeResults.hyperVolumePerSlice = hyperVolumePerSlice;
+    massAndVolumeResults.normallyVolumePerSlice = normallyVolumePerSlice;
+    massAndVolumeResults.poorlyVolumePerSlice = poorlyVolumePerSlice;
+    massAndVolumeResults.nonVolumePerSlice = nonVolumePerSlice;
+    massAndVolumeResults.percentualHyperVolumePerSlice = percentualHyperVolumePerSlice;
+    massAndVolumeResults.percentualNormallyVolumePerSlice = percentualNormallyVolumePerSlice;
+    massAndVolumeResults.percentualPoorlyVolumePerSlice = percentualPoorlyVolumePerSlice;
+    massAndVolumeResults.percentualNonVolumePerSlice = percentualNonVolumePerSlice;
+    
+    %Mass
+    massAndVolumeResults.totalLungMass = totalLungMass;
+    massAndVolumeResults.hyperMass = hyperMass;
+    massAndVolumeResults.poorlyMass = poorlyMass;
+    massAndVolumeResults.normallyMass = normallyMass;
+    massAndVolumeResults.nonMass = nonMass;
+    massAndVolumeResults.percentualHyperMass = percentualHyperMass;
+    massAndVolumeResults.percentualNormallyMass = percentualNormallyMass;
+    massAndVolumeResults.percentualPoorlyMass = percentualPoorlyMass;
+    massAndVolumeResults.percentualNonMass = percentualNonMass;       
+    massAndVolumeResults.hyperMassPerSlice = hyperMassPerSlice;
+    massAndVolumeResults.normallyMassPerSlice = normallyMassPerSlice;
+    massAndVolumeResults.poorlyMassPerSlice = poorlyMassPerSlice;
+    massAndVolumeResults.nonMassPerSlice = nonMassPerSlice;
+    massAndVolumeResults.percentualHyperMassPerSlice = percentualHyperMassPerSlice;
+    massAndVolumeResults.percentualNormallyMassPerSlice = percentualNormallyMassPerSlice;
+    massAndVolumeResults.percentualPoorlyMassPerSlice = percentualPoorlyMassPerSlice;
+    massAndVolumeResults.percentualNonMassPerSlice = percentualNonMassPerSlice;
+    
+    
+    
     %Close log frame.
     close(figObj)
+    
+    massAndVolumeResultsFrame(massAndVolumeResults)
     
 end
 
@@ -655,7 +705,6 @@ function voxelVolume = calculateVoxelVolume(metadata)
 end
 
 
-
 function figObject = createLogFrame()
     %disply calculation log.
     figObject = figure('Units', 'Normalized',...
@@ -682,6 +731,204 @@ function displayLog(figObj, msg, clearAxes)
 
     drawnow
 end
+
+
+%%%%%%%%%%%%%%%%% MASS AND VOLUME CALCULATION %%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+function massAndVolumeResultsFrame(results)
+    %Create main window
+    screenSize = get(0, 'ScreenSize');
+    figObject = figure('Tag', 'massAndVolumeFig',...
+        'MenuBar', 'None',...
+        'NumberTitle', 'Off',...
+        'Name', 'Mass and Volume Results',...
+        'Position', screenSize);   
+    
+     hyperAxes = axes('Parent', figObject,...
+        'Units', 'Normalized',...
+        'Position', [0.1, 0.6, 0.3, 0.3],...
+        'Tag', 'hyperAxes');
+    
+    poorlyAxes = axes('Parent', figObject,...
+        'Units', 'Normalized',...
+        'Position', [0.6, 0.6, 0.3, 0.3],...
+        'Tag', 'poorlyAxes');    
+        
+    normallyAxes = axes('Parent', figObject,...
+        'Units', 'Normalized',...
+        'Position', [0.1, 0.2, 0.3, 0.3],...
+        'Tag', 'normallyAxes');
+    
+    nonAxes = axes('Parent', figObject,...
+        'Units', 'Normalized',...
+        'Position', [0.6, 0.2, 0.3, 0.3],...
+        'Tag', 'nonAxes');
+    
+    uicontrol('Parent', figObject,...
+        'Units', 'Normalized',...
+        'Position', [0.45, 0.95, 0.13, 0.03],...
+        'Style', 'Pop',...
+        'Tag', 'avaiablePlots',...
+        'String', {'Mass', 'Mass Percentual', 'Volume', 'Volume Percentual'})
+    
+    uicontrol('Parent', figObject,...
+        'Units', 'Normalized',...
+        'Position', [0.6, 0.95, 0.05, 0.03],...
+        'String', 'Plot',...
+        'Tag', 'changePlot',...
+        'Callback', @plotNewResult);
+    
+    uicontrol('Parent', figObject,...
+        'Units', 'Normalized',...
+        'Position', [0.7, 0.95, 0.13, 0.03],...
+        'Style', 'Pop',...
+        'Tag', 'avaiablePlots',...
+        'String', {'.CSV', '.MAT'})
+    
+    uicontrol('Parent', figObject,...
+        'Units', 'Normalized',...
+        'Position', [0.85, 0.95, 0.05, 0.03],...
+        'String', 'Export',...
+        'Tag', 'changePlot',...
+        'Callback', @exportResult);
+    
+    resultsTable = uitable('Parent', figObject,...
+        'Units', 'Normalized',...
+        'Position', [0.1, 0.01, 0.8, 0.12],...
+        'ColumnName', {'Total Lung Mass (g)', 'Mass Hyper Aerated (g)',...
+        'Mass Normally Aerated (g)', 'Mass Poorly Aerated (g)',...
+        'Mass Non Aerated (g)','Total Lung Volume (ml)', 'Volume Hyper Aerated (ml)',...
+        'Volume Normally Aerated (ml)', 'Volume Poorly Aerated (ml)',...
+        'Volume Non Aerated (ml)'},'Tag', 'massAndVolumeTable');
+    
+    %Initial Plots
+    
+    results.data{1} = results.hyperMassPerSlice;
+    results.data{2} = results.poorlyMassPerSlice;
+    results.data{3} = results.normallyMassPerSlice;
+    results.data{4} = results.nonMassPerSlice;
+    results.axes(1) = hyperAxes;
+    results.axes(2) = poorlyAxes;
+    results.axes(3) = normallyAxes;
+    results.axes(4) = nonAxes;
+    results.ylabel = 'Mass (g)';
+    
+    
+    %Place results in the Uitable
+    tableCells = cell(1, 18);
+    tableCells{1} = results.totalLungMass;
+    tableCells{2} = results.hyperMass;
+    tableCells{3} = results.normallyMass;
+    tableCells{4} = results.poorlyMass;
+    tableCells{5} = results.nonMass;
+    tableCells{6} = results.totalLungVolume;
+    tableCells{7} = results.hyperVolume;
+    tableCells{8} = results.normallyVolume;
+    tableCells{9} = results.poorlyVolume;
+    tableCells{10} = results.nonVolume;
+    
+    set(resultsTable, 'Data', tableCells);
+    
+    plotResults(results)
+    
+    handles.massAndVolumeData = results;
+    
+    handles.massAndVolumeGui = guihandles(figObject);  
+    
+    guidata(figObject, handles);
+end
+
+
+function plotNewResult(hObject, eventdata)
+    handles = guidata(hObject);
+    
+    avaiablePlots = get(handles.massAndVolumeGui.avaiablePlots, 'String');
+    plotIndex = get(handles.massAndVolumeGui.avaiablePlots, 'Value');
+    
+    results.axes(1) = handles.massAndVolumeData.axes(1);
+    results.axes(2) = handles.massAndVolumeData.axes(2);
+    results.axes(3) = handles.massAndVolumeData.axes(3);
+    results.axes(4) = handles.massAndVolumeData.axes(4);
+    
+    switch avaiablePlots{plotIndex}
+        case 'Mass'
+            
+            results.data{1}  = handles.massAndVolumeData.hyperMassPerSlice;
+            results.data{2}  = handles.massAndVolumeData.poorlyMassPerSlice;
+            results.data{3}  = handles.massAndVolumeData.normallyMassPerSlice;
+            results.data{4}  = handles.massAndVolumeData.nonMassPerSlice;
+            results.ylabel = 'Mass (g)';
+            
+        case 'Mass Percentual'
+            
+            %Prepare data to be plotted
+            results.data{1}  = handles.massAndVolumeData.percentualHyperMassPerSlice;
+            results.data{2}  = handles.massAndVolumeData.percentualPoorlyMassPerSlice;
+            results.data{3}  = handles.massAndVolumeData.percentualNormallyMassPerSlice;
+            results.data{4}  = handles.massAndVolumeData.percentualNonMassPerSlice;
+
+            results.ylabel = 'Mass Percentual (%)';      
+            
+        case 'Volume'
+            results.data{1}  = handles.massAndVolumeData.hyperVolumePerSlice;
+            results.data{2}  = handles.massAndVolumeData.poorlyVolumePerSlice;
+            results.data{3}  = handles.massAndVolumeData.normallyVolumePerSlice;
+            results.data{4}  = handles.massAndVolumeData.nonVolumePerSlice;
+            results.ylabel = 'Volume (ml)';
+            
+        case 'Volume Percentual'
+            results.data{1}  = handles.massAndVolumeData.percentualHyperVolumePerSlice;
+            results.data{2}  = handles.massAndVolumeData.percentualPoorlyVolumePerSlice;
+            results.data{3}  = handles.massAndVolumeData.percentualNormallyVolumePerSlice;
+            results.data{4}  = handles.massAndVolumeData.percentualNonVolumePerSlice;
+            results.ylabel = 'Volume Percentual (%)';
+            
+    end
+    plotResults(results)
+end
+
+
+
+
+function plotResults(results)    
+    axes(results.axes(1))
+    plot(results.data{1}, 'r-o','MarkerFaceColor', 'r')
+    ylabel(results.ylabel)
+    title('Hyper Aerated')
+    axes(results.axes(2))
+    plot(results.data{2}, '-o','MarkerFaceColor', 'b')
+    ylabel(results.ylabel)    
+    title('Poorly Aerated')
+    axes(results.axes(3))
+    plot(results.data{3}, 'b-o','MarkerFaceColor', 'b')
+    ylabel(results.ylabel)
+    title('Normally Aerated')
+    axes(results.axes(4))
+    plot(results.data{4}, 'k-o','MarkerFaceColor', 'k')
+    title('Non Aerated')
+    ylabel(results.ylabel)
+
+end
+%%%%%%%%%%%%%%%%% END MASS AND VOLUME CALCULATION %%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
