@@ -250,6 +250,12 @@ function openDicom(hObject, eventdata)
     dirPath = uigetdir('Select Patient''s Folder');
     
     if dirPath
+        
+        %Display Wait window
+        figObj = createLogFrame();
+        
+        displayLog(figObj, sprintf('%s', 'Loading Images...'), 0)
+        
         handles = guidata(hObject);
         set(handles.gui.mainFig,'Pointer','watch'); drawnow('expose');
         listOfFiles = dir(dirPath);
@@ -296,8 +302,7 @@ function openDicom(hObject, eventdata)
         handles.data.dicomImage = dicomImage;
         
         %Set the Window Width and Window Center
-        [handles.data.displayLow, handles.data.displayHigh] =...
-            calculateWindowWidthAndCenter(handles);
+        handles = calculateWindowWidthAndCenter(handles);
         
         configureSliders(handles)
         
@@ -310,17 +315,27 @@ function openDicom(hObject, eventdata)
         %Update Interface Appearene
         hideShowImageInformation(handles, 'On')
         hideShowSideBar(handles, 'On')
-        set(handles.gui.openMaskMenu, 'Enable', 'On')        
+        set(handles.gui.openMaskMenu, 'Enable', 'On')   
+        
+        %Create a variable to store the Image folder. This way the Masks
+        %could be easier located.
+        handles.data.dicomImagePath = dirPath;
 
         set(handles.gui.navigationAxes, 'Clim',...
             [handles.data.displayLow, handles.data.displayHigh])
         
         guidata(hObject, handles)
+        
+        %Close log frame
+        close(figObj)
     end
 end
 
 function openMask(hObject, eventdata)
-[FileName PathName] = uigetfile('*.hdr', 'Select the file containing the masks');
+
+handles = guidata(hObject);
+[FileName PathName] = uigetfile('*.hdr',...
+    'Select the file containing the masks', handles.data.dicomImagePath);
 
 if FileName
     handles = guidata(hObject);
@@ -383,13 +398,10 @@ function windowWidthCallback(hObject, eventdata)
     windowCenter = get(handles.gui.windowCenterSlider, 'Value');
     
     set(handles.gui.windowWidthText, 'String',sprintf('%.2f', windowWidth));
-    [displayLow, displayHigh] = calculateWindowWidthAndCenter(handles,...
+    handles = calculateWindowWidthAndCenter(handles,...
         windowWidth, windowCenter);
     
-    set(handles.gui.navigationAxes, 'Clim', [displayLow displayHigh])
-    
-    handles.data.displayLow = displayLow;
-    handles.data.displayHigh = displayHigh;
+    set(handles.gui.navigationAxes, 'Clim', [handles.data.displayLow handles.data.displayHigh])
     
     guidata(hObject, handles);
 
@@ -399,15 +411,11 @@ function windowCenterCallback(hObject, eventdata)
     handles = guidata(hObject);
     windowWidth = get(handles.gui.windowWidthSlider, 'Value');
     windowCenter = get(handles.gui.windowCenterSlider, 'Value');
+    
     set(handles.gui.windowCenterText, 'String',sprintf('%.2f', windowCenter));
+    handles = calculateWindowWidthAndCenter(handles, windowWidth, windowCenter);
     
-    [displayLow, displayHigh] = calculateWindowWidthAndCenter(handles,...
-        windowWidth, windowCenter);
-    
-    set(handles.gui.navigationAxes, 'Clim', [displayLow displayHigh])
-    
-    handles.data.displayLow = displayLow;
-    handles.data.displayHigh = displayHigh;
+    set(handles.gui.navigationAxes, 'Clim', [handles.data.displayLow handles.data.displayHigh])
     
     guidata(hObject, handles);
 
@@ -419,8 +427,7 @@ function resetWindowWidthCenter(hObject, eventdata)
     windowWidth = handles.data.metadata.WindowWidth(1);
     windowCenter = handles.data.metadata.WindowCenter(1);
     
-    [handles.data.displayLow, handles.data.displayHigh] =...
-        calculateWindowWidthAndCenter(handles, windowWidth, windowCenter);
+    handles = calculateWindowWidthAndCenter(handles, windowWidth, windowCenter);
     set(handles.gui.navigationAxes, 'Clim', ...
         [handles.data.displayLow, handles.data.displayHigh]);
     set(handles.gui.windowWidthSlider, 'Value', windowWidth);
@@ -444,47 +451,188 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function massAndVolumeCalculation(hObject, eventdata)
+
+    %disply calculation log.
+    figObj = createLogFrame();
+
+    displayLog(figObj, sprintf('%s', 'Calculating Volume...'), 0)
+    
     handles = guidata(hObject);
     
     lung = handles.data.dicomImage;
-    masks = handles.data.masks;
+    masks = logical(handles.data.masks);
     metadata = handles.data.metadata;
+    
+    lungWithMask = applyMaskToLung(lung, masks);
     
     %Default HU values - will be able to be changed in the future.
     hyperRange = [-1000 -900];
     normallyRange = [-900 -500];
     poorlyRange = [-500 -100];
-    nonRange = [-100 100];
+    nonRange = [-100 100]; 
+    
     
     
     %Calculates the Volume.
-    volumeCalculation(lung, masks, metadata, hyperRange, normallyRange,...
-    poorlyRange, nonRange)
+    [hyperVolume, normallyVolume, poorlyVolume, nonVolume,...
+        percentualHyperVolume, totalLungVolume, percentualNormallyVolume,...
+        percentualPoorlyVolume, percentualNonVolume] =...
+        volumeCalculation(lungWithMask, metadata,...
+        hyperRange, normallyRange, poorlyRange, nonRange);
+    
+    %Calculate the Volume Slice by Slice.
+    %Prealocate
+    nSlices = size(lungWithMask, 3);
+    
+    hyperVolumePerSilce = zeros(1, nSlices);
+    normallyVolumePerSilce = zeros(1, nSlices);
+    poorlyVolumePerSilce = zeros(1, nSlices);
+    nonVolumePerSilce = zeros(1, nSlices);
+    totalSliceVolume = zeros(1, nSlices);
+    percentualHyperVolumePerSlice = zeros(1, nSlices); 
+    percentualNormallyVolumePerSlice = zeros(1, nSlices);
+    percentualPoorlyVolumePerSlice = zeros(1, nSlices);
+    percentualNonVolumePerSlice = zeros(1, nSlices);
     
     
+    for jSlice = 1:nSlices
+        
+        %Get the jth Slice.
+        sliceWithMask = lungWithMask(:, :, jSlice);
+        
+        [hyperVolumePerSilce(jSlice), normallyVolumePerSilce(jSlice),...
+            poorlyVolumePerSilce(jSlice), nonVolumePerSilce(jSlice),...
+            totalSliceVolume(jSlice), percentualHyperVolumePerSlice(jSlice),...
+            percentualNormallyVolumePerSlice(jSlice),...
+            percentualPoorlyVolumePerSlice(jSlice),...
+            percentualNonVolumePerSlice(jSlice)] = ...
+            volumeCalculation(sliceWithMask, metadata,...
+            hyperRange, normallyRange, poorlyRange, nonRange);
+        
+    end
+    
+    displayLog(figObj, sprintf('%s', 'Calculating Mass...'), 1)
+    
+    massMethodCalculation = 'Normal';   
+    
+    %Calculate the Mass.
+    [hyperMass, normallyMass, poorlyMass, nonMass,...
+        percentualHyperMass, totalLungMass, percentualNormallyMass,...
+        percentualPoorlyMass, percentualNonMass]  =...
+        massCalculation(lungWithMask, metadata, hyperRange,...
+        normallyRange, poorlyRange, nonRange, massMethodCalculation);
+    
+    
+        %Calculate the Volume Slice by Slice.
+    %Prealocate
+    hyperMassPerSilce = zeros(1, nSlices);
+    normallyMassPerSilce = zeros(1, nSlices);
+    poorlyMassPerSilce = zeros(1, nSlices);
+    nonMassPerSilce = zeros(1, nSlices);
+    totalSliceMass = zeros(1, nSlices);
+    percentualHyperMassPerSlice = zeros(1, nSlices);
+    percentualNormallyMassPerSlice = zeros(1, nSlices);
+    percentualPoorlyMassPerSlice = zeros(1, nSlices);
+    percentualNonMassPerSlice = zeros(1, nSlices);
+    
+    for jSlice = 1:nSlices
+        
+        %Get the jth Slice.
+        sliceWithMask = lungWithMask(:, :, jSlice);
+        
+        [hyperMassPerSilce(jSlice), normallyMassPerSilce(jSlice),...
+            poorlyMassPerSilce(jSlice), nonMassPerSilce(jSlice),...
+            totalSliceMass(jSlice), percentualHyperMassPerSlice(jSlice),...
+            percentualNormallyMassPerSlice(jSlice),...
+            percentualPoorlyMassPerSlice(jSlice),...
+            percentualNonMassPerSlice(jSlice)] = ...
+            massCalculation(sliceWithMask, metadata,...
+            hyperRange, normallyRange, poorlyRange, nonRange, massMethodCalculation);
+        
+    end
+    
+    %Close log frame.
+    close(figObj)
     
 end
 
-function volumeCalculation(lung, masks, metadata, hyperRange, normallyRange,...
+function lungWithMask = applyMaskToLung(lung, masks)
+    lung(masks ~= 1) = 10000;
+    lungWithMask = double(lung);
+end
+
+function [hyperVolume, normallyVolume, poorlyVolume, nonVolume,...
+    percentualHyperVolume, totalLungVolume, percentualNormallyVolume,...
+    percentualPoorlyVolume, percentualNonVolume] =...
+    volumeCalculation(lungWithMask, metadata, hyperRange, normallyRange,...
     poorlyRange, nonRange)
  
     voxelVolume = calculateVoxelVolume(metadata);
     
     if ~isnan(voxelVolume)
-        hyperVolume = length(lung(lung >= hyperRange(1) &...
-            lung < hyperRange(2))) * voxelVolume;
+        hyperVolume = length(lungWithMask(lungWithMask >= hyperRange(1) &...
+            lungWithMask < hyperRange(2))) * voxelVolume;
         
-        normallyVolume = length(lung(lung >= normallyRange(1) &...
-            lung < normallyRange(2))) * voxelVolume;
+        normallyVolume = length(lungWithMask(lungWithMask >= normallyRange(1) &...
+            lungWithMask < normallyRange(2))) * voxelVolume;
         
-        poorlyVolume = length(lung(lung >= poorlyRange(1) &...
-            lung < poorlyRange(2))) * voxelVolume;
+        poorlyVolume = length(lungWithMask(lungWithMask >= poorlyRange(1) &...
+            lungWithMask < poorlyRange(2))) * voxelVolume;
         
-        nonVolume = length(lung(lung >= nonRange(1) &...
-            lung < nonRange(2))) * voxelVolume;
+        nonVolume = length(lungWithMask(lungWithMask >= nonRange(1) &...
+            lungWithMask < nonRange(2))) * voxelVolume;
         
         totalLungVolume = hyperVolume + normallyVolume + poorlyVolume + ...
             nonVolume;
+        
+        %Percentual Volume Calculation.        
+        percentualHyperVolume = hyperVolume / totalLungVolume;
+        percentualNormallyVolume = normallyVolume / totalLungVolume;
+        percentualPoorlyVolume = poorlyVolume / totalLungVolume;
+        percentualNonVolume = nonVolume / totalLungVolume;
+        
+    end
+
+
+end
+
+function [hyperMass, normallyMass, poorlyMass, nonMass,...
+    percentualHyperMass, totalLungMass, percentualNormallyMass,...
+    percentualPoorlyMass, percentualNonMass] =...
+    massCalculation(lungWithMask, metadata,...
+    hyperRange, normallyRange, poorlyRange, nonRange, equationToUse)
+ 
+    voxelVolume = calculateVoxelVolume(metadata);
+    
+    if ~isnan(voxelVolume)     
+        
+        %Choose between different equation to calculate mass.
+        switch equationToUse
+            case 'Normal'
+        
+        hyperMass = sum(1 - (lungWithMask(lungWithMask >= hyperRange(1) &...
+            lungWithMask < hyperRange(2)) / -1000.0)) * voxelVolume;
+        
+        normallyMass = sum(1 - (lungWithMask(lungWithMask >= normallyRange(1) &...
+            lungWithMask < normallyRange(2)) / -1000)) * voxelVolume;
+        
+        poorlyMass = sum(1 - (lungWithMask(lungWithMask >= poorlyRange(1) &...
+            lungWithMask < poorlyRange(2)) / -1000)) * voxelVolume;
+        
+        nonMass = sum(1 - (lungWithMask(lungWithMask >= nonRange(1) &...
+            lungWithMask < nonRange(2)) / -1000)) * voxelVolume;
+        
+        totalLungMass = hyperMass + normallyMass + poorlyMass + nonMass;
+        
+            case 'Simon'
+        end
+        
+        %Percentual Volume Calculation.        
+        percentualHyperMass = hyperMass / totalLungMass;
+        percentualNormallyMass = normallyMass / totalLungMass;
+        percentualPoorlyMass = poorlyMass / totalLungMass;
+        percentualNonMass = nonMass / totalLungMass;
+        
     end
 
 
@@ -505,6 +653,39 @@ function voxelVolume = calculateVoxelVolume(metadata)
     end
     
 end
+
+
+
+function figObject = createLogFrame()
+    %disply calculation log.
+    figObject = figure('Units', 'Normalized',...
+        'Position', [0.3, 0.4, 0.4, 0.2],...
+        'Toolbar', 'None',...
+        'Menubar', 'None',...
+        'Color', 'black',...
+        'Name', 'Log',...
+        'NumberTitle', 'Off',...
+        'WindowStyle', 'Modal',...
+        'Resize', 'Off'); 
+end
+
+function displayLog(figObj, msg, clearAxes)
+   if clearAxes
+       cla
+   else        ax = axes('Parent', figObj,...
+            'Visible', 'Off');
+        axes(ax)
+    end
+
+    text(0.5, 0.5, msg, 'Color', 'white', 'HorizontalAlignment', 'center',...
+    'FontSize', 14)
+
+    drawnow
+end
+
+
+
+
 
 
 
@@ -537,9 +718,8 @@ if(nf>1)
     % Initialize voxelvolume
     voxelvolume=zeros(info.Dimensions,class(voxelvolume));
     % Convert dicom images to voxel volume
-    h = waitbar(0,'Please wait...');
-    for i=1:nf,
-        waitbar(i/nf,h)
+   
+    for i=1:nf       
         I=dicomread(info.Filenames{i});
         if((size(I,3)*size(I,4))>1)
             voxelvolume=I; break;
@@ -547,26 +727,25 @@ if(nf>1)
             voxelvolume(:,:,i)=I;
         end
     end
-    close(h);
 end
 
 end
 
-function [displayLow, displayHigh] = calculateWindowWidthAndCenter(handles,...
+function handles = calculateWindowWidthAndCenter(handles,...
     windowWidth, windowCenter)
 
 if nargin == 1
     %Get the Window Width and Window Center Information
     windowWidth = handles.data.metadata.WindowWidth(1);
     windowCenter = handles.data.metadata.WindowCenter(1);
-end
+    
+    handles.data.minValueDicomImage = min(double(handles.data.dicomImage(:)));
+  end
 
 %Calculate the Window Width and Information parameters
-displayLow = max(windowCenter - 0.5 * windowWidth,...
-    min(double(handles.data.dicomImage(:))));
+handles.data.displayLow = max(windowCenter - 0.5 * windowWidth, handles.data.minValueDicomImage);
+handles.data.displayHigh = max(windowCenter + 0.5 * windowWidth, handles.data.minValueDicomImage);
 
-displayHigh = max(windowCenter + 0.5 * windowWidth,...
-    min(double(handles.data.dicomImage(:))));
 end
 
 function configureSliders(handles)
