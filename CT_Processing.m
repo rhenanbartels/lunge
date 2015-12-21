@@ -116,11 +116,22 @@ function createMenuObjects(parentFigureObject)
     analysisMenu = uimenu('Parent', parentFigureObject,...
         'Label', 'Analysis');
     
-    uimenu('Parent', analysisMenu,...
-        'Label', 'Mass and Volume',...
-        'Callback', @massAndVolumeCalculation,...
+    massAndVolume = uimenu('Parent', analysisMenu,...
+        'Label', 'Mass and Volume',...        ..
         'Enable', 'Off',...
-        'Tag', 'massAndVolumeCalculation')
+        'Tag', 'massAndVolumeCalculation');
+    
+    uimenu('Parent', massAndVolume,...
+        'Label', 'Cranio-Caudal',...
+        'Callback', @massAndVolumeCalculation);
+        
+    uimenu('Parent', massAndVolume,...
+        'Label', 'Antero-Posterior',...
+        'Callback', '');
+    
+    uimenu('Parent', massAndVolume,...
+        'Label', 'Latero-Lateral',...
+        'Callback', '');
     
 end
 
@@ -247,7 +258,13 @@ end
 
 
 function openDicom(hObject, eventdata)
-    dirPath = uigetdir('Select Patient''s Folder');
+
+    handles = guidata(hObject);
+    
+    if isfield(handles, 'data')
+    else
+        dirPath = uigetdir('Select Patient''s Folder');
+    end
     
     if dirPath
         
@@ -255,7 +272,7 @@ function openDicom(hObject, eventdata)
         figObj = createLogFrame();        
         displayLog(figObj, sprintf('%s', 'Loading Images...'), 0)
         
-        handles = guidata(hObject);
+        
         set(handles.gui.mainFig,'Pointer','watch'); drawnow('expose');
         listOfFiles = dir(dirPath);
         
@@ -744,22 +761,24 @@ function massAndVolumeResultsFrame(results)
         'MenuBar', 'None',...
         'NumberTitle', 'Off',...
         'Name', 'Mass and Volume Results',...
-        'Position', screenSize);   
+        'Position', screenSize,...
+        'WindowButtonDownFcn', @exportAxesFigure,...
+        'Tag', 'massAndVolumeFigure');   
     
      hyperAxes = axes('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.1, 0.6, 0.3, 0.3],...
-        'Tag', 'hyperAxes');
+        'Tag', 'hyperAxes');   
+    
+    normallyAxes = axes('Parent', figObject,...
+        'Units', 'Normalized',...
+        'Position', [0.6, 0.6, 0.3, 0.3] ,...
+        'Tag', 'normallyAxes');
     
     poorlyAxes = axes('Parent', figObject,...
         'Units', 'Normalized',...
-        'Position', [0.6, 0.6, 0.3, 0.3],...
-        'Tag', 'poorlyAxes');    
-        
-    normallyAxes = axes('Parent', figObject,...
-        'Units', 'Normalized',...
-        'Position', [0.1, 0.2, 0.3, 0.3],...
-        'Tag', 'normallyAxes');
+        'Position',[0.1, 0.2, 0.3, 0.3] ,...
+        'Tag', 'poorlyAxes');   
     
     nonAxes = axes('Parent', figObject,...
         'Units', 'Normalized',...
@@ -784,7 +803,7 @@ function massAndVolumeResultsFrame(results)
         'Units', 'Normalized',...
         'Position', [0.7, 0.95, 0.13, 0.03],...
         'Style', 'Pop',...
-        'Tag', 'avaiablePlots',...
+        'Tag', 'exportResults',...
         'String', {'.CSV', '.MAT'})
     
     uicontrol('Parent', figObject,...
@@ -792,7 +811,7 @@ function massAndVolumeResultsFrame(results)
         'Position', [0.85, 0.95, 0.05, 0.03],...
         'String', 'Export',...
         'Tag', 'changePlot',...
-        'Callback', @exportResult);
+        'Callback', @massAndVolumeExportResults);
     
     resultsTable = uitable('Parent', figObject,...
         'Units', 'Normalized',...
@@ -802,6 +821,12 @@ function massAndVolumeResultsFrame(results)
         'Mass Non Aerated (g)','Total Lung Volume (ml)', 'Volume Hyper Aerated (ml)',...
         'Volume Normally Aerated (ml)', 'Volume Poorly Aerated (ml)',...
         'Volume Non Aerated (ml)'},'Tag', 'massAndVolumeTable');
+    
+    uicontrol('Parent', figObject,...
+        'Units', 'Normalized',...
+        'Position', [0.45, 0.16, 0.1, 0.04],...
+        'Style', 'Text',...
+        'String', 'Double Click to Export Axes');
     
     %Initial Plots
     
@@ -831,7 +856,7 @@ function massAndVolumeResultsFrame(results)
     
     set(resultsTable, 'Data', tableCells);
     
-    plotResults(results)
+    massAndVolumePlotResults(results)
     
     handles.massAndVolumeData = results;
     
@@ -886,13 +911,13 @@ function plotNewResult(hObject, eventdata)
             results.ylabel = 'Volume Percentual (%)';
             
     end
-    plotResults(results)
+    massAndVolumePlotResults(results)
 end
 
 
 
 
-function plotResults(results)    
+function massAndVolumePlotResults(results)    
     axes(results.axes(1))
     plot(results.data{1}, 'r-o','MarkerFaceColor', 'r')
     ylabel(results.ylabel)
@@ -911,6 +936,72 @@ function plotResults(results)
     ylabel(results.ylabel)
 
 end
+
+function massAndVolumeExportResults(hObject, eventdata)
+    handles = guidata(hObject);
+    exportOptions = get(handles.massAndVolumeGui.exportResults, 'String');
+    exportIndex = get(handles.massAndVolumeGui.exportResults, 'Value');
+    
+    results = handles.massAndVolumeData;
+    
+    switch exportOptions{exportIndex}
+        case '.CSV'
+            massAndVolumeExportToCsv(results);
+        case '.MAT'
+    end
+    
+
+end
+
+function massAndVolumeExportToCsv(results)
+    [fileName pathName] = uiputfile('results.csv');
+    
+    if fileName
+        fullFileName = [pathName fileName];
+        fid = fopen(fullFileName, 'w');
+        massAndVolumeBuildCsvFile(fid, results)
+        fclose(fid);
+        
+    end
+
+
+end
+
+function massAndVolumeBuildCsvFile(fid, results)
+    rowNamesFormat = '%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s';
+    
+    fprintf(fid, sprintf(rowNamesFormat,'Total Lung Mass (g)',  'Hyper Aerated Mass (g)',...
+        'Normally Aerated Mass (g)', 'Poorly Aerated Mass (g)',...
+        'Non Aerated Mass (g)', 'Total Lung Volume (ml)', 'Hyper Aerated Volume (ml)',...
+        'Normally Aerated Volume (ml)', 'Poorly Aerated Volume (ml)', ...
+        'Non Aerated Volume (ml)'));
+
+
+end
+
+function exportAxesFigure(hObject, eventdata)
+    handles = guidata(hObject);
+    
+    clickType = get(handles.massAndVolumeGui.massAndVolumeFigure, 'SelectionType');
+    
+    if strcmp(clickType, 'open')
+        currentAxes = gca;
+        
+        currentAxesChildren = get(currentAxes, 'children');
+        
+        
+        figObj = figure;
+        ax = axes;
+        copyobj(allchild(currentAxes), ax);
+       
+        
+        
+    end
+    
+    
+
+end
+
 %%%%%%%%%%%%%%%%% END MASS AND VOLUME CALCULATION %%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
