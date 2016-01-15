@@ -1,18 +1,18 @@
 function CT_Processing
     figObject = createMainFigure();
-    
+
     %Create Navigation Axes
     navigationAxesObjects = createNavigationAxes(figObject);
-    
+
     %Create Information Texts
     informationTextsObjects = createInformationTexts(navigationAxesObjects.informationAxesObject);
-    
+
     %Create Menus
     createMenuObjects(figObject);
-    
+
 
     createControlSideBar(figObject);
-    handles.gui = guihandles(figObject);  
+    handles.gui = guihandles(figObject);
     guidata(figObject, handles);
 end
 
@@ -30,7 +30,7 @@ function figObject = createMainFigure()
         'Position', screenSize,...
         'Color', 'black',...
         'WindowScrollWheelFcn', @refreshSlicePosition,...
-        'WindowButtonMotionFcn', @mouseMove);  
+        'WindowButtonMotionFcn', @mouseMove);
 
 end
 
@@ -50,7 +50,7 @@ function navigationAxesObjectStructure = createNavigationAxes(parentFigureObject
       'XtickLabel', '',...
       'YtickLabel', '',...
       'Color', 'black');
-  
+
 
 end
 
@@ -63,20 +63,20 @@ function informationTextsObjectsStructure = createInformationTexts(parentAxesObj
         'Tag', 'patientNameTag',...
         'HorizontalAlignment', 'center',...
         'Visible', 'Off');
-    
+
     informationTextsObjectsStructure.slicePosition = text(0.01, 0.02, '1/-',...
         'Color', 'white',...
         'Fontsize', 12,...
         'Fontweight', 'bold',...
         'Visible', 'Off',...
         'Tag', 'slicePositionTag');
-    
+
     informationTextsObjectsStructure.numberOfRows = text(0.01, 0.06, 'Image Size: -',...
         'Color', 'white',...
         'Fontsize', 12,...
         'Fontweight', 'bold',...
         'Visible', 'Off',...
-        'Tag', 'numberOfRowsTag');     
+        'Tag', 'numberOfRowsTag');
 
 
     informationTextsObjectsStructure.pixelValue = text(0.14, 0.02, 'Pixel Value = -',...
@@ -89,8 +89,8 @@ end
 
 function createMenuObjects(parentFigureObject)
     %Create Menu Objects
-    
-    
+
+
     %%%FILE MENU
     fileMenu = uimenu('Parent', parentFigureObject,...
         'Label', 'File');
@@ -106,29 +106,29 @@ function createMenuObjects(parentFigureObject)
         'Acc', 'M',...
         'Enable', 'Off',...
         'Tag', 'openMaskMenu',...
-        'Callback', @openMask);    
+        'Callback', @openMask);
     %Quit Menu
     uimenu('Parent', fileMenu,...
-        'Label', 'Quit',...        
+        'Label', 'Quit',...
         'Callback', '');
-    
+
     %%%ANALYSIS MENU
     analysisMenu = uimenu('Parent', parentFigureObject,...
         'Label', 'Analysis');
-    
+
     massAndVolume = uimenu('Parent', analysisMenu,...
         'Label', 'Mass and Volume',...        ..
         'Enable', 'Off',...
         'Tag', 'massAndVolumeCalculation');
-    
+
     uimenu('Parent', massAndVolume,...
         'Label', 'Cranio-Caudal',...
         'Callback', @massAndVolumeCalculation);
-        
+
     uimenu('Parent', massAndVolume,...
         'Label', 'Antero-Posterior',...
         'Callback', '');
-    
+
     uimenu('Parent', massAndVolume,...
         'Label', 'Latero-Lateral',...
         'Callback', '');
@@ -137,7 +137,11 @@ function createMenuObjects(parentFigureObject)
         'Tag', 'p15Calculation',...
         'Callback', @p15Calculation,...
         'Label', 'P15');
-    
+
+    %%%PLUGINS MENU
+    pluginsMenu = uimenu('Parent', parentFigureObject,...
+        'Label', 'Plugins');
+
 end
 
 function createControlSideBar(parentFigureObject)
@@ -145,33 +149,34 @@ function createControlSideBar(parentFigureObject)
         'Units', 'Normalized',...
         'Position', [0.8, 0, 0.2, 1],...'
         'BackGroundColor', 'black',...
-        'Visible', 'Off',...
+        'Visible', 'On',...
         'Tag', 'sideBarMainPanel');
-    
+
+     %Side Bar Sliders
      uicontrol('Parent', mainPanel,...
         'Style', 'Slider',...
         'Units', 'Normalized',...
         'Position', [0.1, 0.45, 0.1, 0.2],...
         'Tag', 'windowWidthSlider',...
         'Callback', @windowWidthCallback);
-    
+
     uicontrol('Parent', mainPanel,...
         'Style', 'Slider',...
         'Units', 'Normalized',...
         'Position', [0.35, 0.45, 0.1, 0.2],...
         'Tag', 'windowCenterSlider',...
         'Callback', @windowCenterCallback);
-    
+
      uicontrol('Parent',mainPanel,...
         'Style', 'Text',...
         'Units', 'Normalized',...
         'Position', [0.12, 0.67, 0.11, 0.02],...
-        'HorizontalAlignment', 'Center',...        
+        'HorizontalAlignment', 'Center',...
         'String', '0',...
         'BackGroundColor', 'black',...
         'ForeGroundColor', 'white',...
         'Tag', 'windowWidthText');
-    
+
      uicontrol('Parent',mainPanel,...
         'Style', 'Text',...
         'Units', 'Normalized',...
@@ -181,13 +186,14 @@ function createControlSideBar(parentFigureObject)
         'BackGroundColor', 'black',...
         'ForeGroundColor', 'white',...
         'Tag', 'windowCenterText');
-    
+
+    %Window Width and Center Buttons
     uicontrol('Parent', mainPanel,...
         'Units', 'Normalized',...
         'Position', [0.48, 0.45, 0.28, 0.06],...
         'String', 'Reset',...
         'Callback', @resetWindowWidthCenter);
-    
+
     %HU Ranges textfields
     uicontrol('Parent', mainPanel,...
         'Units', 'Normalized', ...
@@ -198,7 +204,7 @@ function createControlSideBar(parentFigureObject)
         'Fontsize', 13,...
         'Fontweight', 'bold',...
         'String', 'HU Ranges');
-    
+
     uicontrol('Parent', mainPanel,...
         'Units', 'Normalized', ...
         'Position', [0.01 , 0.16, 0.45, 0.03],...
@@ -208,7 +214,7 @@ function createControlSideBar(parentFigureObject)
         'Fontsize', 11,...
         'HorizontalAlignment', 'left',...
         'String', 'Hyper Aerated:');
-    
+
         uicontrol('Parent', mainPanel,...
         'Units', 'Normalized', ...
         'Position', [0.01 , 0.12, 0.5, 0.03],...
@@ -218,7 +224,7 @@ function createControlSideBar(parentFigureObject)
         'Fontsize', 11,...
         'HorizontalAlignment', 'left',...
         'String', 'Normally Aerated:');
-    
+
     uicontrol('Parent', mainPanel,...
         'Units', 'Normalized', ...
         'Position', [0.01 , 0.08, 0.45, 0.03],...
@@ -228,7 +234,7 @@ function createControlSideBar(parentFigureObject)
         'Fontsize', 11,...
         'HorizontalAlignment', 'left',...
         'String', 'Poorly Aerated:');
-    
+
     uicontrol('Parent', mainPanel,...
         'Units', 'Normalized', ...
         'Position', [0.01 , 0.04, 0.45, 0.03],...
@@ -238,62 +244,105 @@ function createControlSideBar(parentFigureObject)
         'Fontsize', 11,...
         'HorizontalAlignment', 'left',...
         'String', 'Non Aerated:');
-    
+
     uicontrol('Parent', mainPanel,...
         'Units', 'Normalized',...
         'Position', [0.55, 0.16, 0.15, 0.03],...
         'Style', 'Edit',...
         'Tag', 'upperHyperValue',...
-        'String', '-1000');    
-        
+        'String', '-1000');
+
     uicontrol('Parent', mainPanel,...
         'Units', 'Normalized',...
         'Position', [0.75, 0.16, 0.15, 0.03],...
         'Style', 'Edit',...
         'Tag', 'lowerHyperValue',...
         'String', '-900');
-    
+
     uicontrol('Parent', mainPanel,...
         'Units', 'Normalized',...
         'Position', [0.55, 0.12, 0.15, 0.03],...
         'Style', 'Edit',...
         'Tag', 'upperNormallyValue',...
         'String', '-900');
-    
+
     uicontrol('Parent', mainPanel,...
         'Units', 'Normalized',...
         'Position', [0.75, 0.12, 0.15, 0.03],...
         'Style', 'Edit',...
         'Tag', 'lowerNormallyValue',...
         'String', '-500');
-    
+
     uicontrol('Parent', mainPanel,...
         'Units', 'Normalized',...
         'Position', [0.55, 0.08, 0.15, 0.03],...
         'Style', 'Edit',...
         'Tag', 'upperPoorlyValue',...
         'String', '-500');
-    
+
     uicontrol('Parent', mainPanel,...
         'Units', 'Normalized',...
         'Position', [0.75, 0.08, 0.15, 0.03],...
         'Style', 'Edit',...
         'Tag', 'lowerPoorlyValue',...
         'String', '-100');
-    
+
     uicontrol('Parent', mainPanel,...
             'Units', 'Normalized',...
             'Position', [0.55, 0.04, 0.15, 0.03],...
             'Style', 'Edit',...
             'Tag', 'upperNonValue',...
             'String', '-100');
-        
+
     uicontrol('Parent', mainPanel,...
             'Units', 'Normalized',...
             'Position', [0.75, 0.04, 0.15, 0.03],...
             'Style', 'Edit',...
             'Tag', 'lowerNonValue',...
             'String', '100');
+
+    %Side Bar Slice Range
+    uicontrol('Parent', mainPanel,...
+         'Units', 'Normalized',...
+         'Position', [0.3, 0.35, 0.4, 0.05],...
+         'Style', 'Text',...
+         'BackGroundColor', 'black',...
+         'ForeGroundColor', 'white',...
+         'FontSize', 13,...
+         'FontWeight', 'bold',...
+         'String', 'Slice Range');
+
+    uicontrol('Parent', mainPanel,...
+        'Units', 'Normalized',...
+        'Position', [0.01, 0.33, 0.2, 0.025],...
+        'Style', 'Text',...
+        'String', 'From:',...
+        'BackGroundColor', 'black',...
+        'ForeGroundColor', 'white');
+
+    uicontrol('Parent', mainPanel,...
+        'Units', 'Normalized',...
+        'Position', [0.4, 0.33, 0.2, 0.025],...
+        'Style', 'Text',...
+        'String', 'To:',...
+        'BackGroundColor', 'black',...
+        'ForeGroundColor', 'white');
+
+    uicontrol('Parent', mainPanel,...
+        'Units', 'Normalized',...
+        'Position', [0.25, 0.33, 0.15, 0.025],...
+        'Style', 'Edit',...
+        'String', '1',....
+        'Tag', 'sliceRangeFrom',...
+        'Callback', @sliceRangeFromToCallback);
+
+    uicontrol('Parent', mainPanel,...
+        'Units', 'Normalized',...
+        'Position', [0.6, 0.33, 0.15, 0.025],...
+        'Style', 'Edit',...
+        'String', '1',...
+        'Tag', 'sliceRangeTo',...
+        'Callback', @sliceRangeFromToCallback);
 end
 
 %%%%%%%%%%%% GUI RELATED FUNCTIONS  - END %%%%%%%%%%%%%%%%%%%%%%%%%
@@ -319,25 +368,25 @@ function refreshPatientsInfo(handles, info)
 
 function refreshSlicePosition(hObject, eventdata)
 
-   
+
 slicePositionPlaceHolder = '%d/%d';
 
 handles = guidata(hObject);
 
 if isfield(handles, 'data')
-    
+
     nSlices = size(handles.data.dicomImage, 3);
-    
+
     currentSlicePosition = get(handles.gui.slicePositionTag, 'String');
-    
+
     %Get the new slice position based on the displayed values using regexp
     newSlicePosition = getSlicePosition(currentSlicePosition,...
         eventdata.VerticalScrollCount);
-    
+
     %Make sure that the slice number return to 1 if it is bigger than the
     %number of slices
     newSlicePosition = mod(newSlicePosition, nSlices);
-    
+
     %Make sure that the slice number return to nSlices if it is smaller than the
     %number of slices
     if ~newSlicePosition && eventdata.VerticalScrollCount < 0
@@ -345,23 +394,23 @@ if isfield(handles, 'data')
     elseif ~newSlicePosition && eventdata.VerticalScrollCount > 0
         newSlicePosition = 1;
     end
-    
+
     %Refresh slice position information.
     set(handles.gui.slicePositionTag, 'String',...
         sprintf(slicePositionPlaceHolder, newSlicePosition, nSlices));
     handles = displayCurrentDicom(handles, handles.data.dicomImage, newSlicePosition);
-    
+
     %Refresh pixel value information.
     refreshPixelPositionInfo(handles, handles.gui.navigationAxes)
-    
+
     guidata(hObject, handles)
 end
 end
 
 function newSlicePosition = getSlicePosition(slicePositionString, direction)
     tempSlicePosition = regexp(slicePositionString, '/', 'split');
-    
-    if direction > 0  
+
+    if direction > 0
         newSlicePosition = str2double(tempSlicePosition(1)) + 1;
     else
         newSlicePosition = str2double(tempSlicePosition(1)) - 1;
@@ -372,29 +421,29 @@ end
 function openDicom(hObject, eventdata)
 
     handles = guidata(hObject);
-    
+
     if isfield(handles, 'data')
         dirPath = uigetdir(handles.data.dicomImagePath, 'Select Patient''s Folder');
     else
         dirPath = uigetdir('Select Patient''s Folder');
     end
-    
+
     if dirPath
-        
+
         %Display Wait window
-        figObj = createLogFrame();        
+        figObj = createLogFrame();
         displayLog(figObj, sprintf('%s', 'Loading Images...'), 0)
-        
-        
+
+
         set(handles.gui.mainFig,'Pointer','watch'); drawnow('expose');
         listOfFiles = dir(dirPath);
-        
+
         %Try to open every file with dicomread. If possible use as a Dicom
         nFiles = length(listOfFiles);
-        
+
         found = false;
         counter = 0;
-        
+
         %Create a function to insert this piece of code.
         while ~found
             counter =  counter + 1;
@@ -405,56 +454,56 @@ function openDicom(hObject, eventdata)
                 try
                     handles.data.metadata = dicominfo(completeFileName);
                     info = dicom_read_header(completeFileName);
-                    
+
                     found = true;
                 catch
                     %Do nothing
                     continue
                 end
-                
+
             end
         end
-        
+
         dicomImage = int16(dicom_read_volume(info));
-        
+
         if isfield(info, 'RescaleSlope')
             dicomImage = dicomImage * info.RescaleSlope;
         end
-        
+
         if isfield(info, 'RescaleIntercept')
             dicomImage = dicomImage + info.RescaleIntercept;
         end
-        
+
         set(handles.gui.mainFig,'Pointer','arrow'); drawnow('expose');
-        
-                
+
+
         handles.data.dicomImage = dicomImage;
-        
+
         %Set the Window Width and Window Center
         handles = calculateWindowWidthAndCenter(handles);
-        
+
         configureSliders(handles)
-        
+
         %Display First Slice
         handles = displayCurrentDicom(handles, dicomImage, 1);
-        
+
         %Display Patients Information
         refreshPatientsInfo(handles, info)
-        
+
         %Update Interface Appearene
         hideShowImageInformation(handles, 'On')
         hideShowSideBar(handles, 'On')
-        set(handles.gui.openMaskMenu, 'Enable', 'On')   
-        
+        set(handles.gui.openMaskMenu, 'Enable', 'On')
+
         %Create a variable to store the Image folder. This way the Masks
         %could be easier located.
         handles.data.dicomImagePath = dirPath;
 
         set(handles.gui.navigationAxes, 'Clim',...
             [handles.data.displayLow, handles.data.displayHigh])
-        
+
         guidata(hObject, handles)
-        
+
         %Close log frame
         close(figObj)
     end
@@ -467,25 +516,25 @@ handles = guidata(hObject);
     'Select the file containing the masks', handles.data.dicomImagePath);
 
 if FileName
-    
+
     %Display Wait window
     figObj = createLogFrame();
     displayLog(figObj, sprintf('%s', 'Loading Masks...'), 0)
-    
+
     handles = guidata(hObject);
     fileName = [PathName FileName];
     masks = analyze75read(fileName);
     handles.data.masks = masks;
     guidata(hObject, handles)
-    
-    
+
+
     %UPDATE MENU
     set(handles.gui.massAndVolumeCalculation, 'Enable', 'On')
     set(handles.gui.p15Calculation, 'Enable', 'On')
-    
+
     %Close wait window
     close(figObj);
-    
+
 end
 
 end
@@ -493,22 +542,22 @@ end
 function mouseMove(hObject, eventdata)
     handles = guidata(hObject);
     mainAxes = handles.gui.navigationAxes;
-    refreshPixelPositionInfo(handles, mainAxes);    
+    refreshPixelPositionInfo(handles, mainAxes);
 end
 
 function refreshPixelPositionInfo(handles, mainAxes)
 
 if isfield(handles, 'data')
     C = get(mainAxes,'currentpoint');
-    
+
     xlim = get(mainAxes,'xlim');
     ylim = get(mainAxes,'ylim');
-    
+
     row = round(C(1));
     col = round(C(1, 2));
-    
-    
-    
+
+
+
     %Check if pointer is inside Navigation Axes.
     outX = ~any(diff([xlim(1) C(1,1) xlim(2)])<0);
     outY = ~any(diff([ylim(1) C(1,2) ylim(2)])<0);
@@ -517,16 +566,16 @@ if isfield(handles, 'data')
         currentSlicePositionString = get(handles.gui.slicePositionTag, 'String');
         tempSlicePosition = regexp(currentSlicePositionString, '/', 'split');
         slicePosition = str2double(tempSlicePosition(1));
-        
+
         currentSlice = handles.data.dicomImage(:, :, slicePosition);
-        
+
         pixelValue = currentSlice(col, row);
-        
+
         set(handles.gui.pixelValueTag, 'String', sprintf('Pixel Value = %.2f', double(pixelValue)))
     else
         set(handles.gui.pixelValueTag, 'String', sprintf('Pixel Value = -'))
     end
-    
+
 end
 end
 
@@ -534,13 +583,13 @@ function windowWidthCallback(hObject, eventdata)
     handles = guidata(hObject);
     windowWidth = get(handles.gui.windowWidthSlider, 'Value');
     windowCenter = get(handles.gui.windowCenterSlider, 'Value');
-    
+
     set(handles.gui.windowWidthText, 'String',sprintf('%.2f', windowWidth));
     handles = calculateWindowWidthAndCenter(handles,...
         windowWidth, windowCenter);
-    
+
     set(handles.gui.navigationAxes, 'Clim', [handles.data.displayLow handles.data.displayHigh])
-    
+
     guidata(hObject, handles);
 
 end
@@ -549,29 +598,29 @@ function windowCenterCallback(hObject, eventdata)
     handles = guidata(hObject);
     windowWidth = get(handles.gui.windowWidthSlider, 'Value');
     windowCenter = get(handles.gui.windowCenterSlider, 'Value');
-    
+
     set(handles.gui.windowCenterText, 'String',sprintf('%.2f', windowCenter));
     handles = calculateWindowWidthAndCenter(handles, windowWidth, windowCenter);
-    
+
     set(handles.gui.navigationAxes, 'Clim', [handles.data.displayLow handles.data.displayHigh])
-    
+
     guidata(hObject, handles);
 
 end
 
 function resetWindowWidthCenter(hObject, eventdata)
     handles = guidata(hObject);
-    
+
     windowWidth = handles.data.metadata.WindowWidth(1);
     windowCenter = handles.data.metadata.WindowCenter(1);
-    
+
     handles = calculateWindowWidthAndCenter(handles, windowWidth, windowCenter);
     set(handles.gui.navigationAxes, 'Clim', ...
         [handles.data.displayLow, handles.data.displayHigh]);
     set(handles.gui.windowWidthSlider, 'Value', windowWidth);
     set(handles.gui.windowCenterSlider, 'Value', windowCenter);
     guidata(hObject, handles)
-    
+
 end
 
 function hideShowSideBar(handles, hideOrShow)
@@ -585,6 +634,42 @@ function hideShowImageInformation(handles, hideOrShow)
     set(handles.gui.pixelValueTag, 'Visible', hideOrShow)
 end
 
+function sliceRangeFromToCallback(hObject, eventdata)
+    handles = guidata(hObject);
+    %totalNumberOfSlices = size(handles.data.lung, 3);
+    totalNumberOfSlices = 10;
+    fromRange = get(handles.gui.sliceRangeFrom, 'String');
+    toRange = get(handles.gui.sliceRangeTo, 'String');
+    try
+        validateSliceRangeValues(handles, fromRange, toRange, totalNumberOfSlices)
+    catch
+        errordlg('Some error ocurred in the Slice Range configuration!',...
+        'SliceRangeError');
+    end
+end
+
+function validateSliceRangeValues(handles, fromValue, toValue,...
+    totalNumberOfSlices)
+
+    charNumbers = '1234567890';
+     if ~all(ismember(fromValue, charNumbers))
+        set(handles.gui.sliceRangeFrom, 'String', '1');
+        error('Slice range must be a positive integer', 'RangeError');
+    elseif ~all(ismember(toValue, charNumbers))
+        set(handles.gui.sliceRangeTo, 'String', num2str(totalNumberOfSlices))
+        error('Slice range must be a positive integer', 'RangeError');
+    elseif str2double(toValue) > totalNumberOfSlices
+        set(handles.gui.sliceRangeTo, 'String', num2str(totalNumberOfSlices))
+        error('Slice range could not be bigger than the number of slices!',...
+         'RangeError');
+    elseif str2double(fromValue) > str2double(toValue)
+        set(handles.gui.sliceRangeTo, 'String', num2str(totalNumberOfSlices))
+        set(handles.gui.sliceRangeFrom, 'String', '1');
+        error('FROM range value can not be bigger than TO range value',...
+             'RangeError');
+     end
+end
+
 %%%%%%%%%%%%% ANALYSIS CALLBACKS %%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -594,59 +679,59 @@ function massAndVolumeCalculation(hObject, eventdata)
     figObj = createLogFrame();
 
     displayLog(figObj, sprintf('%s', 'Calculating Volume...'), 0)
-    
+
     handles = guidata(hObject);
-    
+
     lung = handles.data.dicomImage;
     masks = logical(handles.data.masks);
     metadata = handles.data.metadata;
-    
+
     lungWithMask = applyMaskToLung(lung, masks);
-    
+
     %Get HU range Values
-    
+
     hyperRange = str2double(get(handles.gui.upperHyperValue, 'String'));
     hyperRange(2) = str2double(get(handles.gui.lowerHyperValue, 'String'));
-    
-   
+
+
     normallyRange = str2double(get(handles.gui.upperNormallyValue, 'String'));
     normallyRange(2) = str2double(get(handles.gui.lowerNormallyValue, 'String'));
-    
+
     poorlyRange = str2double(get(handles.gui.upperPoorlyValue, 'String'));
     poorlyRange(2) = str2double(get(handles.gui.lowerPoorlyValue, 'String'));
-        
+
     nonRange = str2double(get(handles.gui.upperNonValue, 'String'));
     nonRange(2) = str2double(get(handles.gui.lowerNonValue, 'String'));
-    
-   
-    
+
+    %%TODO: Validate and use slice range
+
     %Calculates the Volume.
     [hyperVolume, normallyVolume, poorlyVolume, nonVolume,...
         percentualHyperVolume, totalLungVolume, percentualNormallyVolume,...
         percentualPoorlyVolume, percentualNonVolume] =...
         volumeCalculation(lungWithMask, metadata,...
         hyperRange, normallyRange, poorlyRange, nonRange);
-    
+
     %Calculate the Volume Slice by Slice.
     %Prealocate
     nSlices = size(lungWithMask, 3);
-    
+
     hyperVolumePerSlice = zeros(1, nSlices);
     normallyVolumePerSlice = zeros(1, nSlices);
     poorlyVolumePerSlice = zeros(1, nSlices);
     nonVolumePerSlice = zeros(1, nSlices);
     totalSliceVolume = zeros(1, nSlices);
-    percentualHyperVolumePerSlice = zeros(1, nSlices); 
+    percentualHyperVolumePerSlice = zeros(1, nSlices);
     percentualNormallyVolumePerSlice = zeros(1, nSlices);
     percentualPoorlyVolumePerSlice = zeros(1, nSlices);
     percentualNonVolumePerSlice = zeros(1, nSlices);
-    
-    
+
+
     for jSlice = 1:nSlices
-        
+
         %Get the jth Slice.
         sliceWithMask = lungWithMask(:, :, jSlice);
-        
+
         [hyperVolumePerSlice(jSlice), normallyVolumePerSlice(jSlice),...
             poorlyVolumePerSlice(jSlice), nonVolumePerSlice(jSlice),...
             totalSliceVolume(jSlice), percentualHyperVolumePerSlice(jSlice),...
@@ -655,21 +740,21 @@ function massAndVolumeCalculation(hObject, eventdata)
             percentualNonVolumePerSlice(jSlice)] = ...
             volumeCalculation(sliceWithMask, metadata,...
             hyperRange, normallyRange, poorlyRange, nonRange);
-        
+
     end
-    
+
     displayLog(figObj, sprintf('%s', 'Calculating Mass...'), 1)
-    
-    massMethodCalculation = 'Normal';   
-    
+
+    massMethodCalculation = 'Normal';
+
     %Calculate the Mass.
     [hyperMass, normallyMass, poorlyMass, nonMass,...
         percentualHyperMass, totalLungMass, percentualNormallyMass,...
         percentualPoorlyMass, percentualNonMass]  =...
         massCalculation(lungWithMask, metadata, hyperRange,...
         normallyRange, poorlyRange, nonRange, massMethodCalculation);
-    
-    
+
+
         %Calculate the Volume Slice by Slice.
     %Prealocate
     hyperMassPerSlice = zeros(1, nSlices);
@@ -681,12 +766,12 @@ function massAndVolumeCalculation(hObject, eventdata)
     percentualNormallyMassPerSlice = zeros(1, nSlices);
     percentualPoorlyMassPerSlice = zeros(1, nSlices);
     percentualNonMassPerSlice = zeros(1, nSlices);
-    
+
     for jSlice = 1:nSlices
-        
+
         %Get the jth Slice.
         sliceWithMask = lungWithMask(:, :, jSlice);
-        
+
         [hyperMassPerSlice(jSlice), normallyMassPerSlice(jSlice),...
             poorlyMassPerSlice(jSlice), nonMassPerSlice(jSlice),...
             totalSliceMass(jSlice), percentualHyperMassPerSlice(jSlice),...
@@ -695,9 +780,8 @@ function massAndVolumeCalculation(hObject, eventdata)
             percentualNonMassPerSlice(jSlice)] = ...
             massCalculation(sliceWithMask, metadata,...
             hyperRange, normallyRange, poorlyRange, nonRange, massMethodCalculation);
-        
     end
-    
+
     %Store the indices.
     %Volume
     massAndVolumeResults.totalLungVolume = totalLungVolume;
@@ -708,7 +792,7 @@ function massAndVolumeCalculation(hObject, eventdata)
     massAndVolumeResults.percentualHyperVolume = percentualHyperVolume;
     massAndVolumeResults.percentualNormallyVolume = percentualNormallyVolume;
     massAndVolumeResults.percentualPoorlyVolume = percentualPoorlyVolume;
-    massAndVolumeResults.percentualNonVolume = percentualNonVolume;       
+    massAndVolumeResults.percentualNonVolume = percentualNonVolume;
     massAndVolumeResults.hyperVolumePerSlice = hyperVolumePerSlice;
     massAndVolumeResults.normallyVolumePerSlice = normallyVolumePerSlice;
     massAndVolumeResults.poorlyVolumePerSlice = poorlyVolumePerSlice;
@@ -717,7 +801,7 @@ function massAndVolumeCalculation(hObject, eventdata)
     massAndVolumeResults.percentualNormallyVolumePerSlice = percentualNormallyVolumePerSlice;
     massAndVolumeResults.percentualPoorlyVolumePerSlice = percentualPoorlyVolumePerSlice;
     massAndVolumeResults.percentualNonVolumePerSlice = percentualNonVolumePerSlice;
-    
+
     %Mass
     massAndVolumeResults.totalLungMass = totalLungMass;
     massAndVolumeResults.hyperMass = hyperMass;
@@ -727,7 +811,7 @@ function massAndVolumeCalculation(hObject, eventdata)
     massAndVolumeResults.percentualHyperMass = percentualHyperMass;
     massAndVolumeResults.percentualNormallyMass = percentualNormallyMass;
     massAndVolumeResults.percentualPoorlyMass = percentualPoorlyMass;
-    massAndVolumeResults.percentualNonMass = percentualNonMass;       
+    massAndVolumeResults.percentualNonMass = percentualNonMass;
     massAndVolumeResults.hyperMassPerSlice = hyperMassPerSlice;
     massAndVolumeResults.normallyMassPerSlice = normallyMassPerSlice;
     massAndVolumeResults.poorlyMassPerSlice = poorlyMassPerSlice;
@@ -736,23 +820,23 @@ function massAndVolumeCalculation(hObject, eventdata)
     massAndVolumeResults.percentualNormallyMassPerSlice = percentualNormallyMassPerSlice;
     massAndVolumeResults.percentualPoorlyMassPerSlice = percentualPoorlyMassPerSlice;
     massAndVolumeResults.percentualNonMassPerSlice = percentualNonMassPerSlice;
-    
-    
-    
+
+
+
     %Close log frame.
     close(figObj)
-    
+
     massAndVolumeResultsFrame(massAndVolumeResults)
-    
+
 end
 
 function p15Calculation(hObject, eventdata)
     handles = guidata(hObject);
-    
+
     metadata = handles.data.metadata;
     lung = handles.data.dicomImage;
     masks = handles.data.masks;
-    
+
     p15ResultsFrame(lung, masks, metadata);
 end
 
@@ -766,31 +850,31 @@ function [hyperVolume, normallyVolume, poorlyVolume, nonVolume,...
     percentualPoorlyVolume, percentualNonVolume] =...
     volumeCalculation(lungWithMask, metadata, hyperRange, normallyRange,...
     poorlyRange, nonRange)
- 
+
     voxelVolume = calculateVoxelVolume(metadata);
-    
+
     if ~isnan(voxelVolume)
         hyperVolume = length(lungWithMask(lungWithMask >= hyperRange(1) &...
             lungWithMask < hyperRange(2))) * voxelVolume;
-        
+
         normallyVolume = length(lungWithMask(lungWithMask >= normallyRange(1) &...
             lungWithMask < normallyRange(2))) * voxelVolume;
-        
+
         poorlyVolume = length(lungWithMask(lungWithMask >= poorlyRange(1) &...
             lungWithMask < poorlyRange(2))) * voxelVolume;
-        
+
         nonVolume = length(lungWithMask(lungWithMask >= nonRange(1) &...
             lungWithMask < nonRange(2))) * voxelVolume;
-        
+
         totalLungVolume = hyperVolume + normallyVolume + poorlyVolume + ...
             nonVolume;
-        
-        %Percentual Volume Calculation.        
+
+        %Percentual Volume Calculation.
         percentualHyperVolume = hyperVolume / totalLungVolume;
         percentualNormallyVolume = normallyVolume / totalLungVolume;
         percentualPoorlyVolume = poorlyVolume / totalLungVolume;
         percentualNonVolume = nonVolume / totalLungVolume;
-        
+
     end
 
 
@@ -801,47 +885,47 @@ function [hyperMass, normallyMass, poorlyMass, nonMass,...
     percentualPoorlyMass, percentualNonMass] =...
     massCalculation(lungWithMask, metadata,...
     hyperRange, normallyRange, poorlyRange, nonRange, equationToUse)
- 
+
     voxelVolume = calculateVoxelVolume(metadata);
-    
-    if ~isnan(voxelVolume)     
-        
+
+    if ~isnan(voxelVolume)
+
         %Choose between different equation to calculate mass.
         switch equationToUse
             case 'Normal'
-        
+
         hyperMass = sum(1 - (lungWithMask(lungWithMask >= hyperRange(1) &...
             lungWithMask < hyperRange(2)) / -1000.0)) * voxelVolume;
-        
+
         normallyMass = sum(1 - (lungWithMask(lungWithMask >= normallyRange(1) &...
             lungWithMask < normallyRange(2)) / -1000)) * voxelVolume;
-        
+
         poorlyMass = sum(1 - (lungWithMask(lungWithMask >= poorlyRange(1) &...
             lungWithMask < poorlyRange(2)) / -1000)) * voxelVolume;
-        
+
         nonMass = sum(1 - (lungWithMask(lungWithMask >= nonRange(1) &...
             lungWithMask < nonRange(2)) / -1000)) * voxelVolume;
-        
+
         totalLungMass = hyperMass + normallyMass + poorlyMass + nonMass;
-        
+
             case 'Simon'
         end
-        
-        %Percentual Volume Calculation.        
+
+        %Percentual Volume Calculation.
         percentualHyperMass = hyperMass / totalLungMass;
         percentualNormallyMass = normallyMass / totalLungMass;
         percentualPoorlyMass = poorlyMass / totalLungMass;
         percentualNonMass = nonMass / totalLungMass;
-        
+
     end
 
 
 end
 
 function voxelVolume = calculateVoxelVolume(metadata)
-    
+
     voxelVolume = NaN;
-    
+
     if isfield(metadata,'SpacingBetweenSlices');
         if isfield(metadata,'SliceThickness')
             voxelVolume = (metadata.PixelSpacing(1) ^ 2 * metadata.SliceThickness * 0.001) *...
@@ -851,7 +935,7 @@ function voxelVolume = calculateVoxelVolume(metadata)
                 metadata.SliceThickness * 0.001);
         end
     end
-    
+
 end
 
 
@@ -865,7 +949,7 @@ function figObject = createLogFrame()
         'Name', 'Log',...
         'NumberTitle', 'Off',...
         'WindowStyle', 'Modal',...
-        'Resize', 'Off'); 
+        'Resize', 'Off');
 end
 
 function displayLog(figObj, msg, clearAxes)
@@ -896,56 +980,56 @@ function massAndVolumeResultsFrame(results)
         'Name', 'Mass and Volume Results',...
         'Position', screenSize,...
         'WindowButtonDownFcn', @exportAxesFigure,...
-        'Tag', 'massAndVolumeFigure');   
-    
+        'Tag', 'massAndVolumeFigure');
+
      hyperAxes = axes('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.1, 0.6, 0.3, 0.3],...
-        'Tag', 'hyperAxes');   
-    
+        'Tag', 'hyperAxes');
+
     normallyAxes = axes('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.6, 0.6, 0.3, 0.3] ,...
         'Tag', 'normallyAxes');
-    
+
     poorlyAxes = axes('Parent', figObject,...
         'Units', 'Normalized',...
         'Position',[0.1, 0.2, 0.3, 0.3] ,...
-        'Tag', 'poorlyAxes');   
-    
+        'Tag', 'poorlyAxes');
+
     nonAxes = axes('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.6, 0.2, 0.3, 0.3],...
         'Tag', 'nonAxes');
-    
+
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.45, 0.95, 0.13, 0.03],...
         'Style', 'Pop',...
         'Tag', 'avaiablePlots',...
         'String', {'Mass', 'Mass Percentual', 'Volume', 'Volume Percentual'})
-    
+
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.6, 0.95, 0.05, 0.03],...
         'String', 'Plot',...
         'Tag', 'changePlot',...
         'Callback', @plotNewResult);
-    
+
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.7, 0.95, 0.13, 0.03],...
         'Style', 'Pop',...
         'Tag', 'exportResults',...
         'String', {'.CSV', '.MAT'})
-    
+
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.85, 0.95, 0.05, 0.03],...
         'String', 'Export',...
         'Tag', 'changePlot',...
         'Callback', @massAndVolumeExportResults);
-    
+
     resultsTable = uitable('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.1, 0.01, 0.8, 0.12],...
@@ -954,15 +1038,15 @@ function massAndVolumeResultsFrame(results)
         'Mass Non Aerated (g)','Total Lung Volume (ml)', 'Volume Hyper Aerated (ml)',...
         'Volume Normally Aerated (ml)', 'Volume Poorly Aerated (ml)',...
         'Volume Non Aerated (ml)'},'Tag', 'massAndVolumeTable');
-    
+
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.45, 0.16, 0.1, 0.04],...
         'Style', 'Text',...
         'String', 'Double Click to Export Axes');
-    
+
     %Initial Plots
-    
+
     results.data{1} = results.hyperMassPerSlice;
     results.data{2} = results.poorlyMassPerSlice;
     results.data{3} = results.normallyMassPerSlice;
@@ -972,8 +1056,8 @@ function massAndVolumeResultsFrame(results)
     results.axes(3) = normallyAxes;
     results.axes(4) = nonAxes;
     results.ylabel = 'Mass (g)';
-    
-    
+
+
     %Place results in the Uitable
     tableCells = cell(1, 18);
     tableCells{1} = results.totalLungMass;
@@ -986,63 +1070,63 @@ function massAndVolumeResultsFrame(results)
     tableCells{8} = results.normallyVolume;
     tableCells{9} = results.poorlyVolume;
     tableCells{10} = results.nonVolume;
-    
+
     set(resultsTable, 'Data', tableCells);
-    
+
     massAndVolumePlotResults(results)
-    
+
     handles.massAndVolumeData = results;
-    
-    handles.massAndVolumeGui = guihandles(figObject);  
-    
+
+    handles.massAndVolumeGui = guihandles(figObject);
+
     guidata(figObject, handles);
 end
 
 
 function plotNewResult(hObject, eventdata)
     handles = guidata(hObject);
-    
+
     avaiablePlots = get(handles.massAndVolumeGui.avaiablePlots, 'String');
     plotIndex = get(handles.massAndVolumeGui.avaiablePlots, 'Value');
-    
+
     results.axes(1) = handles.massAndVolumeData.axes(1);
     results.axes(2) = handles.massAndVolumeData.axes(2);
     results.axes(3) = handles.massAndVolumeData.axes(3);
     results.axes(4) = handles.massAndVolumeData.axes(4);
-    
+
     switch avaiablePlots{plotIndex}
         case 'Mass'
-            
+
             results.data{1}  = handles.massAndVolumeData.hyperMassPerSlice;
             results.data{2}  = handles.massAndVolumeData.poorlyMassPerSlice;
             results.data{3}  = handles.massAndVolumeData.normallyMassPerSlice;
             results.data{4}  = handles.massAndVolumeData.nonMassPerSlice;
             results.ylabel = 'Mass (g)';
-            
+
         case 'Mass Percentual'
-            
+
             %Prepare data to be plotted
             results.data{1}  = handles.massAndVolumeData.percentualHyperMassPerSlice;
             results.data{2}  = handles.massAndVolumeData.percentualPoorlyMassPerSlice;
             results.data{3}  = handles.massAndVolumeData.percentualNormallyMassPerSlice;
             results.data{4}  = handles.massAndVolumeData.percentualNonMassPerSlice;
 
-            results.ylabel = 'Mass Percentual (%)';      
-            
+            results.ylabel = 'Mass Percentual (%)';
+
         case 'Volume'
             results.data{1}  = handles.massAndVolumeData.hyperVolumePerSlice;
             results.data{2}  = handles.massAndVolumeData.poorlyVolumePerSlice;
             results.data{3}  = handles.massAndVolumeData.normallyVolumePerSlice;
             results.data{4}  = handles.massAndVolumeData.nonVolumePerSlice;
             results.ylabel = 'Volume (ml)';
-            
+
         case 'Volume Percentual'
             results.data{1}  = handles.massAndVolumeData.percentualHyperVolumePerSlice;
             results.data{2}  = handles.massAndVolumeData.percentualPoorlyVolumePerSlice;
             results.data{3}  = handles.massAndVolumeData.percentualNormallyVolumePerSlice;
             results.data{4}  = handles.massAndVolumeData.percentualNonVolumePerSlice;
             results.ylabel = 'Volume Percentual (%)';
-            
+
     end
     massAndVolumePlotResults(results)
 end
@@ -1050,14 +1134,14 @@ end
 
 
 
-function massAndVolumePlotResults(results)    
+function massAndVolumePlotResults(results)
     axes(results.axes(1))
     plot(results.data{1}, 'r-o','MarkerFaceColor', 'r')
     ylabel(results.ylabel)
     title('Hyper Aerated')
     axes(results.axes(2))
     plot(results.data{2}, '-o','MarkerFaceColor', 'b')
-    ylabel(results.ylabel)    
+    ylabel(results.ylabel)
     title('Poorly Aerated')
     axes(results.axes(3))
     plot(results.data{3}, 'b-o','MarkerFaceColor', 'b')
@@ -1074,28 +1158,28 @@ function massAndVolumeExportResults(hObject, eventdata)
     handles = guidata(hObject);
     exportOptions = get(handles.massAndVolumeGui.exportResults, 'String');
     exportIndex = get(handles.massAndVolumeGui.exportResults, 'Value');
-    
+
     results = handles.massAndVolumeData;
-    
+
     switch exportOptions{exportIndex}
         case '.CSV'
             massAndVolumeExportToCsv(results);
         case '.MAT'
             massAndVolumeExportToMat(results);
     end
-    
+
 
 end
 
 function massAndVolumeExportToCsv(results)
     [fileName pathName] = uiputfile('results.csv');
-    
+
     if fileName
         fullFileName = [pathName fileName];
         fid = fopen(fullFileName, 'w');
         massAndVolumeBuildCsvFile(fid, results)
         fclose(fid);
-        
+
     end
 
 
@@ -1103,24 +1187,24 @@ end
 
 function massAndVolumeExportToMat(results)
     [fileName pathName] = uiputfile('results.mat');
-    
+
     %Prepare data
     results = rmfield(results, 'data');
     results = rmfield(results, 'axes');
     results = rmfield(results, 'ylabel');
-    
-    
+
+
     if fileName
         fullFileName = [pathName fileName];
         save(fullFileName, 'results');
-        
+
     end
- 
+
 end
 
 function massAndVolumeBuildCsvFile(fid, results)
     rowNamesFormat = '%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s';
-    
+
     fprintf(fid, sprintf(rowNamesFormat,'Total Lung Mass (g)',  'Hyper Aerated Mass (g)',...
         'Normally Aerated Mass (g)', 'Poorly Aerated Mass (g)',...
         'Non Aerated Mass (g)', 'Total Lung Volume (ml)', 'Hyper Aerated Volume (ml)',...
@@ -1132,24 +1216,24 @@ end
 
 function exportAxesFigure(hObject, eventdata)
     handles = guidata(hObject);
-    
+
     clickType = get(handles.massAndVolumeGui.massAndVolumeFigure, 'SelectionType');
-    
+
     if strcmp(clickType, 'open')
         currentAxes = gca;
-        
+
         currentAxesChildren = get(currentAxes, 'children');
-        
-        
+
+
         figObj = figure;
         ax = axes;
         copyobj(allchild(currentAxes), ax);
-       
-        
-        
+
+
+
     end
-    
-    
+
+
 
 end
 
@@ -1172,18 +1256,18 @@ function p15ResultsFrame(lung, masks, metadata)
         'Name', 'Mass and Volume Results',...
         'Position', screenSize,...
         'WindowButtonDownFcn', @exportAxesFigure,...
-        'Tag', 'massAndVolumeFigure');   
-    
+        'Tag', 'massAndVolumeFigure');
+
      p15MassAxes = axes('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.1, 0.4, 0.35, 0.45],...
-        'Tag', 'p15MassAxes');   
-    
+        'Tag', 'p15MassAxes');
+
     p15VolumeAxes = axes('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.6, 0.4, 0.35, 0.45] ,...
         'Tag', 'p15VolumeAxes');
-    
+
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.4, 0.3, 0.05, 0.02],...
@@ -1191,7 +1275,7 @@ function p15ResultsFrame(lung, masks, metadata)
         'String', {'15', '5', '10', '20', '25', '30', '35'},...
         'Tag', 'p15MassPop',...
         'Callback', @p15MassChangePValue);
-    
+
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.1, 0.3, 0.05, 0.02],...
@@ -1199,79 +1283,79 @@ function p15ResultsFrame(lung, masks, metadata)
         'Tag', 'p15MassHuResults',...
         'HorizontalAlignment', 'left',...
         'String', 'P15 (hu) =');
-    
+
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.1, 0.26, 0.065, 0.02],...
-        'Style', 'Text',... 
+        'Style', 'Text',...
         'HorizontalAlignment', 'left',...
         'String', 'Volume (ml) = ');
-    
+
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.1, 0.22, 0.065, 0.02],...
         'Style', 'Text',...
         'HorizontalAlignment', 'left',...
         'String', 'Mass (g) = ');
-    
+
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.1, 0.18, 0.065, 0.02],...
         'Style', 'Text',...
         'HorizontalAlignment', 'left',...
         'String', 'Density (g/l) = ');
-    
-        
+
+
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.6, 0.3, 0.05, 0.02],...
         'Style', 'Text',...
         'HorizontalAlignment', 'left',...
         'String', 'P15 (hu) =');
-    
+
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.6, 0.26, 0.065, 0.02],...
         'Style', 'Text',...
         'HorizontalAlignment', 'left',...
         'String', 'Volume (ml) = ');
-    
+
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.6, 0.22, 0.065, 0.02],...
         'Style', 'Text',...
         'HorizontalAlignment', 'left',...
         'String', 'Mass (g) = ');
-    
+
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
         'Position', [0.6, 0.18, 0.065, 0.02],...
         'Style', 'Text',...
         'HorizontalAlignment', 'left',...
         'String', 'Density (g/l) = ');
-    
-    
+
+
     %Display Wait window
     figObj = createLogFrame();
     displayLog(figObj, sprintf('%s', 'Calculating P15...'), 0)
-    
+
     lungWithMask = applyMaskToLung(lung, masks);
-    
+
     [pXVolume, volumePercentual, huRange] = calculatePX(lungWithMask, metadata,...
         15, 'both');
 
-    
+
     axes(p15VolumeAxes)
     plot(huRange, volumePercentual)
     xlabel('Housfield  Units (HU)')
     ylabel('Cumulative Volume (%)')
-    
+
     handles.p15Gui = guihandles(figObject);
-    
+
     guidata(figObject, handles);
-    
+
     close(figObj);
-    
+
 end
 
 
@@ -1279,14 +1363,14 @@ function p15MassChangePValue(hObject, eventdata)
     handles = guidata(hObject);
     pValueIndex = get(handles.p15Gui.p15MassPop, 'Value');
     pValuesOptions = get(handles.p15Gui.p15MassPop, 'String');
-    
+
     newPValue = str2double(pValuesOptions{pValueIndex});
-    
+
     newPStringFormat = 'P%d (hu)';
     set(handles.p15Gui.p15MassHuResults, 'String', sprintf(newPStringFormat, newPValue));
-    
+
     lungWithMask = applyMaskToLung(lung, masks);
-    
+
     [pXVolume, volumePercentual] = calculatePX(lungWithMask, masks,...
         metadata, X, typeOfCalc);
 
@@ -1296,7 +1380,7 @@ end
 function [pXVolume, volumePercentual, huRange] = calculatePX(lung,...
     metadata, X, typeOfCalc)
 
-    
+
 
     voxelVolume = calculateVoxelVolume(metadata);
     if ~isnan(voxelVolume)
@@ -1305,23 +1389,23 @@ function [pXVolume, volumePercentual, huRange] = calculatePX(lung,...
                 huRange = -1000:100;
                 nClasses = length(huRange);
                 massPerDensity = zeros(1, nClasses);
-                volumePerDensity = zeros(1, nClasses);    
-            
-                            
+                volumePerDensity = zeros(1, nClasses);
+
+
                 for hu = 1:nClasses
                     nVoxels = length(lung(lung == huRange(hu)));
                     volumePerDensity(hu) =nVoxels * voxelVolume;
                     %massPerDensity(counter);
                     lung(lung == huRange(hu)) = [];
                 end
-                
+
                 volumeCumulativeSum = cumsum(volumePerDensity);
                 volumePercentual = volumeCumulativeSum /...
                     volumeCumulativeSum(end) * 100;
-                
+
                 pXVolume = huRange(find(volumePercentual >= X, 1));
-                
-            
+
+
             case 'mass'
             otherwise
         end
@@ -1373,8 +1457,8 @@ if(nf>1)
     % Initialize voxelvolume
     voxelvolume=zeros(info.Dimensions,class(voxelvolume));
     % Convert dicom images to voxel volume
-   
-    for i=1:nf       
+
+    for i=1:nf
         I=dicomread(info.Filenames{i});
         if((size(I,3)*size(I,4))>1)
             voxelvolume=I; break;
@@ -1393,7 +1477,7 @@ if nargin == 1
     %Get the Window Width and Window Center Information
     windowWidth = handles.data.metadata.WindowWidth(1);
     windowCenter = handles.data.metadata.WindowCenter(1);
-    
+
     handles.data.minValueDicomImage = min(double(handles.data.dicomImage(:)));
   end
 
@@ -1465,7 +1549,7 @@ function datasets=dicom_folder_info(link,subfolders)
 % inputs,
 %   link : A link to a folder like "C:\temp" or a link to the first
 %           file of a dicom volume "C:\temp\01.dcm"
-%   subfolders : Boolean if true (default) also look in sub-folders for 
+%   subfolders : Boolean if true (default) also look in sub-folders for
 %           dicom files
 %
 % ouputs,
@@ -1479,7 +1563,7 @@ function datasets=dicom_folder_info(link,subfolders)
 %
 %  datasets =  1x7 struct array with fields
 %
-%  datasets(1) = 
+%  datasets(1) =
 %             Filenames: {24x1 cell}
 %                 Sizes: [512 512 24]
 %                Scales: [0.3320 0.3320 4.4992]
@@ -1614,11 +1698,11 @@ for i=1:length(filelist)
                 Filename=info.Filename;
                 if(isfield(info,'InstanceNumber')), InstanceNumber=info.InstanceNumber; end
                 if(isfield(info,'ImagePositionPatient')),ImagePositionPatient=info.ImagePositionPatient; end
-                
+
                 if(isfield(info,'SeriesInstanceUID')), SeriesInstanceUID=info.SeriesInstanceUID; end
                 hash=string2hash([dirname SeriesInstanceUID]);
                 if(isempty(filehash)||(filehash==hash))
-                    nfiles=nfiles+1; 
+                    nfiles=nfiles+1;
                     dicomfilelist.Filename{ nfiles}=Filename;
                     dicomfilelist.InstanceNumber( nfiles)=InstanceNumber;
                     dicomfilelist.ImagePositionPatient(nfiles,:)=ImagePositionPatient(:)';
@@ -1655,15 +1739,15 @@ function hash=string2hash(str,type)
 %   hash : The hash value, integer value between 0 and 2^32-1
 %   type : Type of has 'djb2' (default) or 'sdbm'
 %
-% From c-code on : http://www.cse.yorku.ca/~oz/hash.html 
+% From c-code on : http://www.cse.yorku.ca/~oz/hash.html
 %
 % djb2
-%  this algorithm was first reported by dan bernstein many years ago 
+%  this algorithm was first reported by dan bernstein many years ago
 %  in comp.lang.c
 %
 % sdbm
 %  this algorithm was created for sdbm (a public-domain reimplementation of
-%  ndbm) database library. it was found to do well in scrambling bits, 
+%  ndbm) database library. it was found to do well in scrambling bits,
 %  causing better distribution of the keys and fewer splits. it also happens
 %  to be a good general hashing function with good distribution.
 %
@@ -1680,13 +1764,13 @@ str=double(str);
 if(nargin<2), type='djb2'; end
 switch(type)
     case 'djb2'
-        hash = 5381*ones(size(str,1),1); 
-        for i=1:size(str,2), 
-            hash = mod(hash * 33 + str(:,i), 2^32-1); 
+        hash = 5381*ones(size(str,1),1);
+        for i=1:size(str,2),
+            hash = mod(hash * 33 + str(:,i), 2^32-1);
         end
     case 'sdbm'
         hash = zeros(size(str,1),1);
-        for i=1:size(str,2), 
+        for i=1:size(str,2),
             hash = mod(hash * 65599 + str(:,i), 2^32-1);
         end
     otherwise
