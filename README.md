@@ -1,5 +1,4 @@
-#Lunge
-Software for quantitative lung image analysis
+#Lunge *Software for quantitative lung image analysis*
 
 ##Requirements
 
