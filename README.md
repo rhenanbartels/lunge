@@ -1,9 +1,11 @@
-#Lunge *Software for quantitative lung image analysis*
+# lunge
 
-##Requirements
+*Software for quantitative lung image analysis*
 
-##Usage
+## Requirements
 
-##How to contribute
+## Usage
 
-###Code convetions
+## How to contribute
+
+### Code convetions
