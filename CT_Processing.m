@@ -841,7 +841,7 @@ function p15Calculation(hObject, eventdata)
 end
 
 function lungWithMask = applyMaskToLung(lung, masks)
-    lung(masks ~= 1) = 10000;
+    lung(masks == 0) = 10000;
     lungWithMask = double(lung);
 end
 
@@ -1248,24 +1248,29 @@ end
 
 function p15ResultsFrame(lung, masks, metadata)
 
+    voxelVolume = calculateVoxelVolume(metadata);
+
+    lungWithMask = applyMaskToLung(lung, masks);
+    [pXVolume, volumePercentual, huRange] = calculatePX(lungWithMask, metadata,...
+        15, 'both', voxelVolume);
+
+
     %Create main window
     screenSize = get(0, 'ScreenSize');
-    figObject = figure('Tag', 'massAndVolumeFig',...
-        'MenuBar', 'None',...
+    figObject = figure('MenuBar', 'None',...
         'NumberTitle', 'Off',...
         'Name', 'Mass and Volume Results',...
-        'Position', screenSize,...
-        'WindowButtonDownFcn', @exportAxesFigure,...
-        'Tag', 'massAndVolumeFigure');
+        'Position', screenSize,...        
+        'Tag', 'p15Figure');
 
      p15MassAxes = axes('Parent', figObject,...
         'Units', 'Normalized',...
-        'Position', [0.1, 0.4, 0.35, 0.45],...
-        'Tag', 'p15MassAxes');
+        'Position',[0.6, 0.4, 0.35, 0.45] ,...
+        'Tag', 'p15MassAxes');    
 
     p15VolumeAxes = axes('Parent', figObject,...
         'Units', 'Normalized',...
-        'Position', [0.6, 0.4, 0.35, 0.45] ,...
+        'Position', [0.1, 0.4, 0.35, 0.45] ,...
         'Tag', 'p15VolumeAxes');
 
     uicontrol('Parent', figObject,...
@@ -1274,37 +1279,39 @@ function p15ResultsFrame(lung, masks, metadata)
         'Style', 'Pop',...
         'String', {'15', '5', '10', '20', '25', '30', '35'},...
         'Tag', 'p15MassPop',...
-        'Callback', @p15MassChangePValue);
+        'Callback', @p15VolumeChangePValue);
 
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
-        'Position', [0.1, 0.3, 0.05, 0.02],...
+        'Position', [0.1, 0.3, 0.10, 0.02],...
         'Style', 'Text',...
-        'Tag', 'p15MassHuResults',...
+        'Tag', 'p15VolumeHuResults',...
         'HorizontalAlignment', 'left',...
         'String', 'P15 (hu) =');
 
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
-        'Position', [0.1, 0.26, 0.065, 0.02],...
+        'Position', [0.1, 0.26, 0.1, 0.02],...
         'Style', 'Text',...
         'HorizontalAlignment', 'left',...
+        'Tag','volumeHuResults',...
         'String', 'Volume (ml) = ');
 
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
-        'Position', [0.1, 0.22, 0.065, 0.02],...
+        'Position', [0.1, 0.22, 0.1, 0.02],...
         'Style', 'Text',...
         'HorizontalAlignment', 'left',...
+        'Tag','massHuResults',...
         'String', 'Mass (g) = ');
 
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
-        'Position', [0.1, 0.18, 0.065, 0.02],...
+        'Position', [0.1, 0.18, 0.1, 0.02],...
         'Style', 'Text',...
         'HorizontalAlignment', 'left',...
+        'Tag','densityHuResults',...
         'String', 'Density (g/l) = ');
-
 
     uicontrol('Parent', figObject,...
         'Units', 'Normalized',...
@@ -1335,75 +1342,94 @@ function p15ResultsFrame(lung, masks, metadata)
         'String', 'Density (g/l) = ');
 
 
-    %Display Wait window
-    figObj = createLogFrame();
-    displayLog(figObj, sprintf('%s', 'Calculating P15...'), 0)
-
-    lungWithMask = applyMaskToLung(lung, masks);
-
-    [pXVolume, volumePercentual, huRange] = calculatePX(lungWithMask, metadata,...
-        15, 'both');
-
-
     axes(p15VolumeAxes)
     plot(huRange, volumePercentual)
     xlabel('Housfield  Units (HU)')
+    ylabel('Cumulative Number of Voxels (%)')
+    %Plot the corresponding value in the axes
+    plotPXLines(p15VolumeAxes, huRange, volumePercentual, pXVolume, 15)
+    
+    axes(p15MassAxes)
+    plot(huRange, volumePercentual)
+    xlabel('Cumulative Mass (g)')
     ylabel('Cumulative Volume (%)')
-
+    plotPXLines(p15MassAxes, huRange, volumePercentual, -850, 15)
+    
+    handles.p15Data.voxelVolume = voxelVolume;
+    handles.p15Data.lungWithMask = lungWithMask;
+    handles.p15Data.pXVolume = pXVolume;
+    handles.p15Data.volumePercentual = volumePercentual;
+    handles.p15Data.huRange = huRange;
+    
     handles.p15Gui = guihandles(figObject);
-
+    handles.p15Gui.p15VolumeAxes = p15VolumeAxes;
+    
     guidata(figObject, handles);
 
-    close(figObj);
+ end
 
+function plotPXLines(targetAxes, xData, yData, x, y)
+    xLim = get(targetAxes, 'xlim');
+    axes(targetAxes)
+    cla
+    plot(xData, yData)
+    hold on
+    plot([xLim(1), x], [y, y], 'k')
+    plot([x, x], [0, y], 'k')
+    xlabel('Housfield  Units (HU)')
+    ylabel('Cumulative Number of Voxels (%)')
+    hold off
 end
 
-
-function p15MassChangePValue(hObject, eventdata)
+function p15VolumeChangePValue(hObject, eventdata)
     handles = guidata(hObject);
     pValueIndex = get(handles.p15Gui.p15MassPop, 'Value');
     pValuesOptions = get(handles.p15Gui.p15MassPop, 'String');
 
     newPValue = str2double(pValuesOptions{pValueIndex});
 
-    newPStringFormat = 'P%d (hu)';
-    set(handles.p15Gui.p15MassHuResults, 'String', sprintf(newPStringFormat, newPValue));
-
-    lungWithMask = applyMaskToLung(lung, masks);
-
-    [pXVolume, volumePercentual] = calculatePX(lungWithMask, masks,...
-        metadata, X, typeOfCalc);
-
+    pXVolume = closerPXValue(handles.p15Data.volumePercentual,...
+        handles.p15Data.huRange, newPValue);
+    
+    plotPXLines(handles.p15Gui.p15VolumeAxes, handles.p15Data.huRange,...
+        handles.p15Data.volumePercentual, pXVolume, newPValue)
+    
+    [volume, mass, density] = calculateVolumeMassAndDensityBasedOnPX(handles.p15Data.lungWithMask,...
+    handles.p15Data.voxelVolume, pXVolume);
+    setPXTextResults(handles, newPValue, pXVolume, volume, mass, density)
 end
 
 
-function [pXVolume, volumePercentual, huRange] = calculatePX(lung,...
-    metadata, X, typeOfCalc)
-
-
-
-    voxelVolume = calculateVoxelVolume(metadata);
+function [pXVolume, percentualNumberOfVoxels, huRange] = calculatePX(lung,...
+    metadata, X, typeOfCalc, voxelVolume)
+    lung(lung > 100 | lung <= -1000) = [];
+    
     if ~isnan(voxelVolume)
         switch typeOfCalc
             case 'both'
                 huRange = -1000:100;
+                lungTotalVoxels = length(lung);
                 nClasses = length(huRange);
                 massPerDensity = zeros(1, nClasses);
+                percentualNumberOfVoxels = zeros(1, nClasses);
                 volumePerDensity = zeros(1, nClasses);
-
-
+                h = waitbar(0, 'Calculating P15...');
                 for hu = 1:nClasses
                     nVoxels = length(lung(lung == huRange(hu)));
-                    volumePerDensity(hu) =nVoxels * voxelVolume;
+                    percentualNumberOfVoxels(hu) = nVoxels / lungTotalVoxels;
+                    volumePerDensity(hu) = nVoxels * voxelVolume;
                     %massPerDensity(counter);
                     lung(lung == huRange(hu)) = [];
+                      waitbar(hu / nClasses);
                 end
+                close(h)
+                percentualNumberOfVoxels = cumsum(percentualNumberOfVoxels) * 100;
 
                 volumeCumulativeSum = cumsum(volumePerDensity);
                 volumePercentual = volumeCumulativeSum /...
                     volumeCumulativeSum(end) * 100;
 
-                pXVolume = huRange(find(volumePercentual >= X, 1));
+               pXVolume = closerPXValue(percentualNumberOfVoxels, huRange, 15);
 
 
             case 'mass'
@@ -1412,6 +1438,37 @@ function [pXVolume, volumePercentual, huRange] = calculatePX(lung,...
     end
 
 end
+
+function [volume, mass, density] = calculateVolumeMassAndDensityBasedOnPX(lung,...
+    voxelVolume, pXValue)
+    nVoxels = length(lung(lung >= -1000 & lung <= pXValue));
+    volume = nVoxels * voxelVolume;
+    mass = 10;
+    density = mass / volume;
+    
+end
+
+function setPXTextResults(handles, newPValue, pXVolume, volume, mass, density)
+    newPStringFormat = 'P%d (hu) = %d';
+    newVolumeStringFormat = 'Volume (L) = %.2f';
+    newMassStringFormat = 'Mass (g) = %.2f';
+    newDensityStringFormat = 'Density (g/L) = %.2f';
+    
+    set(handles.p15Gui.p15VolumeHuResults, 'String',...
+        sprintf(newPStringFormat, newPValue, pXVolume));
+    set(handles.p15Gui.volumeHuResults, 'String',...
+        sprintf(newVolumeStringFormat, volume));
+    set(handles.p15Gui.massHuResults, 'String',...
+        sprintf(newMassStringFormat, mass));
+    set(handles.p15Gui.densityHuResults, 'String',...
+        sprintf(newDensityStringFormat, density));
+end
+
+function pXValue = closerPXValue(percentualIndice, huRange, newPValue)
+    [~, pXPosition] = min(abs(percentualIndice -  newPValue));
+    pXValue = huRange(pXPosition);
+end
+
 
 %%%%%%%%%%%%%%%%% END P15 CALCULATION %%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
