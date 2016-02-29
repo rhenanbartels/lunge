@@ -11,8 +11,10 @@
 Download the program clicking in the "Download Zip" button. Unzip the folder
 and then execute the following steps:
 
-```>> cd /path/to/program/code/
-```>> lunge
+```matlab
+>> cd /path/to/program/code/
+>> lunge
+```
 
 ## How to contribute
 
