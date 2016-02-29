@@ -17,7 +17,7 @@ and then execute the following steps in Matlab<sup>TM</sup> Command Window:
 ```
 
 ## How to contribute
-Download or make clone of the current repository, use your favourite text editor
+Download or fork the current repository, use your favourite text editor
 and apply the following code convetion:
 
 ### Code convetions
