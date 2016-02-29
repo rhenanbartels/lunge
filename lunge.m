@@ -1175,9 +1175,32 @@ function massAndVolumeExportToCsv(results)
     [fileName pathName] = uiputfile('results.csv');
 
     if fileName
+        
+        indicesNames = {'Total Lung Mass (g)', 'Hyper Aerated Mass (g)',...
+            'Poorly Aerated Mass (g)', 'Normally Aerated Mass (g)',...
+            'Non Aerated Mass (g)', 'Total Lung Volume (L)',...
+            'Hyper Aerated Volume (L)', 'Poorly Aerated Volume (L)',...
+            'Normally Aerated Volume (L)', 'Non Aerated  Volume (L)',...
+            'Perc Hyper Mass (%)', 'Perc Poorly Mass (%)',...
+            'Perc Normally Mass (%)', 'Perc Non Mass (%)',...
+            'Perc Hyper Volume (%)', 'Perc Poorly Volume (%)',...
+            'Perc Normally Volume (%)', 'Perc Non Volume (%)',...
+            'Hyper Aerated Mass i (g)', 'Poorly Aerated Mass i (g)',...
+            'Normally Aerated Mass i (g)', 'Non Aerated Mass i (g)',...
+            'Hyper Aerated Volume i (L)', 'Poorly Aerated Volume i (L)',...
+            'Normally Aerated Volume i (L)', 'Non Aerated Volume i (L)',...
+            'Perc Hyper Aerated Mass i (%)', 'Perc Poorly Aerated Mass i (%)',...
+            'Perc Normally Aerated Mass i (%)', 'Perc Non Aerated Mass i (%)',...
+            'Perc Hyper Aerated Volume i (%)', 'Perc Poorly Aerated Volume i (%)',...
+            'Perc Normally Aerated Volume i (%)', 'Perc Non Aerated Volume i (%)'};
+            
+        results = rmfield(results, 'data');
+        results = rmfield(results, 'axes');
+        results = rmfield(results, 'ylabel');
+
         fullFileName = [pathName fileName];
         fid = fopen(fullFileName, 'w');
-        massAndVolumeBuildCsvFile(fid, results)
+        massAndVolumeBuildCsvFile(fid, indicesNames, results)
         fclose(fid);
 
     end
@@ -1202,16 +1225,126 @@ function massAndVolumeExportToMat(results)
 
 end
 
-function massAndVolumeBuildCsvFile(fid, results)
-    rowNamesFormat = '%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s';
+function massAndVolumeBuildCsvFile(fid, indicesNames, results)
+    fprintf(fid, '%s,', indicesNames{1});
+    fprintf(fid,'%.2f\r\n', results.totalLungMass)
+    
+    fprintf(fid, '%s,', indicesNames{2});
+    fprintf(fid, '%.2f\r\n', results.hyperMass);
+    
+    fprintf(fid, '%s,', indicesNames{3});
+    fprintf(fid, '%.2f\r\n', results.poorlyMass);
+    
+    fprintf(fid, '%s,', indicesNames{4});
+    fprintf(fid, '%.2f\r\n', results.normallyMass);
+    
+    fprintf(fid, '%s,', indicesNames{5});
+    fprintf(fid, '%.2f\r\n', results.nonMass);
+    
+    fprintf(fid, '%s,', indicesNames{6});
+    fprintf(fid,'%.2f\r\n', results.totalLungVolume);
+    
+    fprintf(fid, '%s,', indicesNames{7});
+    fprintf(fid, '%.2f\r\n', results.hyperVolume);
+    
+    fprintf(fid, '%s,', indicesNames{8});
+    fprintf(fid, '%.2f\r\n', results.poorlyVolume);
+    
+    fprintf(fid, '%s,', indicesNames{9});
+    fprintf(fid, '%.2f\r\n', results.normallyVolume);
+    
+    fprintf(fid, '%s,', indicesNames{10});
+    fprintf(fid, '%.2f\r\n', results.nonVolume);
+    
+    fprintf(fid, '%s,', indicesNames{11});
+    fprintf(fid,'%.2f\r\n', results.percentualHyperMass);
+    
+    fprintf(fid, '%s,', indicesNames{12});
+    fprintf(fid, '%.2f\r\n', results.percentualPoorlyMass);
+    
+    fprintf(fid, '%s,', indicesNames{13});
+    fprintf(fid, '%.2f\r\n', results.percentualNormallyMass);
+    
+    fprintf(fid, '%s,', indicesNames{14});
+    fprintf(fid, '%.2f\r\n', results.percentualNonMass);
+    
+    fprintf(fid, '%s,', indicesNames{15});
+    fprintf(fid,'%.2f\r\n', results.percentualHyperVolume);
+    
+    fprintf(fid, '%s,', indicesNames{16});
+    fprintf(fid, '%.2f\r\n', results.percentualPoorlyVolume);
+    
+    fprintf(fid, '%s,', indicesNames{17});
+    fprintf(fid, '%.2f\r\n', results.percentualNormallyVolume);
+    
+    fprintf(fid, '%s,', indicesNames{18});
+    fprintf(fid, '%.2f\r\n', results.percentualNonVolume);
+    
+    
+    fprintf(fid, '%s,', indicesNames{19});
+    writeArrayToCsvFile(fid, results.hyperMassPerSlice);
+    
+    fprintf(fid, '\r\n%s,', indicesNames{20})
+    writeArrayToCsvFile(fid, results.poorlyMassPerSlice);
+    
+        
+    fprintf(fid, '\r\n%s,', indicesNames{21});
+    writeArrayToCsvFile(fid, results.normallyMassPerSlice);
+    
+    fprintf(fid, '\r\n%s,', indicesNames{22});
+    writeArrayToCsvFile(fid, results.nonMassPerSlice);
+    
+    
+    fprintf(fid, '\r\n%s,', indicesNames{23});
+    writeArrayToCsvFile(fid, results.hyperVolumePerSlice);
+    
+    fprintf(fid, '\r\n%s,', indicesNames{24});
+    writeArrayToCsvFile(fid, results.poorlyVolumePerSlice);
+    
+        
+    fprintf(fid, '\r\n%s,', indicesNames{25});
+    writeArrayToCsvFile(fid, results.normallyVolumePerSlice);
+    
+    fprintf(fid, '\r\n%s,', indicesNames{26});
+    writeArrayToCsvFile(fid, results.nonVolumePerSlice);
+    %TODO: some percentual indices are missing!
+    
+    fprintf(fid, '%s,', indicesNames{27});
+    writeArrayToCsvFile(fid, results.percentualHyperMassPerSlice);
+    
+    fprintf(fid, '\r\n%s,', indicesNames{28})
+    writeArrayToCsvFile(fid, results.percentualNonMassPerSlice);
+    
+        
+    fprintf(fid, '\r\n%s,', indicesNames{29});
+    writeArrayToCsvFile(fid, results.percentual);
+    
+    fprintf(fid, '\r\n%s,', indicesNames{30});
+    writeArrayToCsvFile(fid, results.nonMassPerSlice);
+    
+    
+    fprintf(fid, '\r\n%s,', indicesNames{31});
+    writeArrayToCsvFile(fid, results.hyperVolumePerSlice);
+    
+    fprintf(fid, '\r\n%s,', indicesNames{32});
+    writeArrayToCsvFile(fid, results.poorlyVolumePerSlice);
+    
+        
+    fprintf(fid, '\r\n%s,', indicesNames{33});
+    writeArrayToCsvFile(fid, results.normallyVolumePerSlice);
+    
+    fprintf(fid, '\r\n%s,', indicesNames{34});
+    writeArrayToCsvFile(fid, results.nonVolumePerSlice);
+    
+    
+    
 
-    fprintf(fid, sprintf(rowNamesFormat,'Total Lung Mass (g)',  'Hyper Aerated Mass (g)',...
-        'Normally Aerated Mass (g)', 'Poorly Aerated Mass (g)',...
-        'Non Aerated Mass (g)', 'Total Lung Volume (ml)', 'Hyper Aerated Volume (ml)',...
-        'Normally Aerated Volume (ml)', 'Poorly Aerated Volume (ml)', ...
-        'Non Aerated Volume (ml)'));
+end
 
-
+function writeArrayToCsvFile(fid, indicesArray)
+    for index = 1:length(indicesArray)
+        fprintf(fid, '%.2f,', indicesArray(index));
+    end
 end
 
 function exportAxesFigure(hObject, eventdata)
@@ -1353,7 +1486,8 @@ function p15ResultsFrame(lung, masks, metadata)
     plot(huRange, volumePercentual)
     xlabel('Cumulative Mass (g)')
     ylabel('Cumulative Volume (%)')
-    plotPXLines(p15MassAxes, huRange, volumePercentual, -850, 15)
+    plotPXLines(p15MassAxes, huRange, volumePercentual, -850, 15)      
+
     
     handles.p15Data.voxelVolume = voxelVolume;
     handles.p15Data.lungWithMask = lungWithMask;
@@ -1363,6 +1497,12 @@ function p15ResultsFrame(lung, masks, metadata)
     
     handles.p15Gui = guihandles(figObject);
     handles.p15Gui.p15VolumeAxes = p15VolumeAxes;
+    
+    [volume, mass, density] = calculateVolumeMassAndDensityBasedOnPX(lungWithMask,...
+        voxelVolume, pXVolume);
+    
+    setPXTextResults(handles, 15, pXVolume, volume, mass, density)
+    
     
     guidata(figObject, handles);
 
