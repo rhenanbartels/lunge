@@ -1309,32 +1309,32 @@ function massAndVolumeBuildCsvFile(fid, indicesNames, results)
     writeArrayToCsvFile(fid, results.nonVolumePerSlice);
     %TODO: some percentual indices are missing!
     
-    fprintf(fid, '%s,', indicesNames{27});
+    fprintf(fid, '\r\n%s,', indicesNames{27});
     writeArrayToCsvFile(fid, results.percentualHyperMassPerSlice);
     
-    fprintf(fid, '\r\n%s,', indicesNames{28})
-    writeArrayToCsvFile(fid, results.percentualNonMassPerSlice);
+     fprintf(fid, '\r\n%s,', indicesNames{28});
+    writeArrayToCsvFile(fid, results.percentualPoorlyMassPerSlice);
     
-        
-    fprintf(fid, '\r\n%s,', indicesNames{29});
-    writeArrayToCsvFile(fid, results.percentual);
+    fprintf(fid, '\r\n%s,', indicesNames{29})
+    writeArrayToCsvFile(fid, results.percentualNormallyMassPerSlice);       
+
     
     fprintf(fid, '\r\n%s,', indicesNames{30});
-    writeArrayToCsvFile(fid, results.nonMassPerSlice);
+    writeArrayToCsvFile(fid, results.percentualNonMassPerSlice);
     
     
     fprintf(fid, '\r\n%s,', indicesNames{31});
-    writeArrayToCsvFile(fid, results.hyperVolumePerSlice);
+    writeArrayToCsvFile(fid, results.percentualHyperVolumePerSlice);
     
     fprintf(fid, '\r\n%s,', indicesNames{32});
-    writeArrayToCsvFile(fid, results.poorlyVolumePerSlice);
+    writeArrayToCsvFile(fid, results.percentualPoorlyVolumePerSlice);
     
         
     fprintf(fid, '\r\n%s,', indicesNames{33});
-    writeArrayToCsvFile(fid, results.normallyVolumePerSlice);
+    writeArrayToCsvFile(fid, results.percentualNormallyVolumePerSlice);
     
     fprintf(fid, '\r\n%s,', indicesNames{34});
-    writeArrayToCsvFile(fid, results.nonVolumePerSlice);
+    writeArrayToCsvFile(fid, results.percentualNonVolumePerSlice);
     
     
     
