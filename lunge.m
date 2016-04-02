@@ -1,4 +1,4 @@
-function CT_Processing
+function lunge %%% -- INFO -- the function file name is what matters, so lets make this equal
     figObject = createMainFigure();
 
     %Create Navigation Axes
@@ -27,7 +27,8 @@ function figObject = createMainFigure()
         'MenuBar', 'None',...
         'NumberTitle', 'Off',...
         'Name', 'New CT Processing V 0.0.1dev',...
-        'Position', screenSize,...
+        'units', 'normalized', ...
+        'OuterPosition', [0 0.03 1 0.97], ... %%% -- INFO -- in my laptop I can not see the top of the window, only after manually risize. I think it is a problem with windows, anyway a chaged the dimensions, is ok in your screen?
         'Color', 'black',...
         'WindowScrollWheelFcn', @refreshSlicePosition,...
         'WindowButtonMotionFcn', @mouseMove);
@@ -95,6 +96,11 @@ function createMenuObjects(parentFigureObject)
     fileMenu = uimenu('Parent', parentFigureObject,...
         'Label', 'File');
     openGroup = uimenu('Parent', fileMenu, 'Label', 'Open');
+    %Load Patient Menu
+    uimenu('Parent', openGroup,...
+        'Label', 'Open Patient',...
+        'Acc', 'P',...
+        'Callback', @openPatient);
     %Load Frame Menu
     uimenu('Parent', openGroup,...
         'Label', 'Open Frame',...
@@ -107,6 +113,18 @@ function createMenuObjects(parentFigureObject)
         'Enable', 'Off',...
         'Tag', 'openMaskMenu',...
         'Callback', @openMask);
+    %Save data Menu
+    uimenu('Parent', fileMenu,...
+        'Label', 'Save Data',...
+        'Enable', 'Off',...
+        'Tag', 'saveDataMenu',...
+        'Callback', @saveData);
+    %Close Patient Menu
+    uimenu('Parent', fileMenu,...
+        'Label', 'Close Patient',...
+        'Enable', 'Off',...
+        'Tag', 'closePatientMenu',...
+        'Callback', @closePatient);
     %Quit Menu
     uimenu('Parent', fileMenu,...
         'Label', 'Quit',...
@@ -132,12 +150,19 @@ function createMenuObjects(parentFigureObject)
     uimenu('Parent', massAndVolume,...
         'Label', 'Latero-Lateral',...
         'Callback', '');
+    
     uimenu('Parent',analysisMenu,...
         'Enable', 'Off',...
         'Tag', 'p15Calculation',...
         'Callback', @p15Calculation,...
         'Label', 'P15');
 
+    uimenu('Parent',analysisMenu,...
+        'Enable', 'Off',...
+        'Tag', 'toSUV',...
+        'Callback', @toSUV,...
+        'Label', 'PET to SUV');
+    
     %%%PLUGINS MENU
     pluginsMenu = uimenu('Parent', parentFigureObject,...
         'Label', 'Plugins');
@@ -168,24 +193,26 @@ function createControlSideBar(parentFigureObject)
         'Callback', @windowCenterCallback);
 
      uicontrol('Parent',mainPanel,...
-        'Style', 'Text',...
+        'Style', 'Edit',...
         'Units', 'Normalized',...
         'Position', [0.12, 0.67, 0.11, 0.02],...
         'HorizontalAlignment', 'Center',...
         'String', '0',...
         'BackGroundColor', 'black',...
         'ForeGroundColor', 'white',...
-        'Tag', 'windowWidthText');
+        'Tag', 'windowWidthText',...
+        'Callback', @windowWidthTextCallback);
 
      uicontrol('Parent',mainPanel,...
-        'Style', 'Text',...
+        'Style', 'Edit',...
         'Units', 'Normalized',...
         'Position', [0.37, 0.67, 0.11, 0.02],...
         'HorizontalAlignment', 'Center',...
         'String', '0',...
         'BackGroundColor', 'black',...
         'ForeGroundColor', 'white',...
-        'Tag', 'windowCenterText');
+        'Tag', 'windowCenterText',...
+        'Callback', @windowCenterTextCallback);
 
     %Window Width and Center Buttons
     uicontrol('Parent', mainPanel,...
@@ -343,6 +370,31 @@ function createControlSideBar(parentFigureObject)
         'String', '1',...
         'Tag', 'sliceRangeTo',...
         'Callback', @sliceRangeFromToCallback);
+    
+    % Overlay checkboxes
+    uicontrol('Parent', mainPanel,...
+        'Units', 'Normalized',...
+        'Position', [0.1, 0.95, 0.8, 0.025],...
+        'Style', 'CheckBox',...
+        'String', 'Show Mask',...
+        'FontSize', 13,...
+        'BackGroundColor', 'black',...
+        'ForeGroundColor', 'white',...
+        'Enable','off',...
+        'Tag', 'maskChk',...
+        'Callback', @maskChkCallback);
+    
+    uicontrol('Parent', mainPanel,...
+        'Units', 'Normalized',...
+        'Position', [0.1, 0.92, 0.8, 0.025],...
+        'Style', 'CheckBox',...
+        'String', 'Show PET',...
+        'FontSize', 13,...
+        'BackGroundColor', 'black',...
+        'ForeGroundColor', 'white',...
+        'Enable','off',...
+        'Tag', 'petChk',...
+        'Callback', @petChkCallback);
 end
 
 %%%%%%%%%%%% GUI RELATED FUNCTIONS  - END %%%%%%%%%%%%%%%%%%%%%%%%%
@@ -351,6 +403,14 @@ end
 
 function handles = displayCurrentDicom(handles, dicomImage, slicePosition)
     axes(handles.gui.navigationAxes)
+    set(findobj(handles.gui.navigationAxes,'type','image'),'CData',dicomImage(:, :, slicePosition))
+    set(handles.gui.navigationAxes, 'Clim', [handles.data.displayLow, handles.data.displayHigh]);
+    colormap(gray)
+end
+
+function handles = createDisplayDicom(handles, dicomImage, slicePosition)
+    axes(handles.gui.navigationAxes)
+    set(handles.gui.navigationAxes,'nextPlot','replace')
     handles.gui.imagePlot = imagesc(dicomImage(:, :, slicePosition));
     set(handles.gui.navigationAxes, 'Clim', [handles.data.displayLow, handles.data.displayHigh]);
     colormap(gray)
@@ -391,14 +451,31 @@ if isfield(handles, 'data')
     %number of slices
     if ~newSlicePosition && eventdata.VerticalScrollCount < 0
         newSlicePosition = nSlices;
-    elseif ~newSlicePosition && eventdata.VerticalScrollCount > 0
+    elseif ~newSlicePosition && eventdata.VerticalScrollCount >= 0 %%% -- INFO -- matlab has some hard time with the scroll of my laptop, in this case VerticalScrollCount == 0, it get an error latter in this function and this is error realy I need to restart matlab. I changed > to >=
         newSlicePosition = 1;
     end
 
     %Refresh slice position information.
     set(handles.gui.slicePositionTag, 'String',...
         sprintf(slicePositionPlaceHolder, newSlicePosition, nSlices));
-    handles = displayCurrentDicom(handles, handles.data.dicomImage, newSlicePosition);
+    if handles.gui.petDisplay
+        if isfield(handles.dataPET,'CT')
+            handles = displayCurrentDicom(handles, handles.dataPET.CT, newSlicePosition);
+        end
+    else
+        handles = displayCurrentDicom(handles, handles.data.dicomImage, newSlicePosition);
+    end
+    
+    % refresh overlay if needed
+    if get(handles.gui.maskChk,'value')
+        if handles.gui.petDisplay
+            refreshOverlay(handles.dataPET.masks,handles)
+        else
+            refreshOverlay(handles.data.masks,handles)
+        end
+    elseif get(handles.gui.petChk,'Value') && handles.gui.petDisplay
+        refreshOverlay(handles.dataPET.dicomImage,handles)
+    end
 
     %Refresh pixel value information.
     refreshPixelPositionInfo(handles, handles.gui.navigationAxes)
@@ -417,8 +494,7 @@ function newSlicePosition = getSlicePosition(slicePositionString, direction)
     end
 end
 
-
-function openDicom(hObject, eventdata)
+function openPatient(hObject, eventdata)
 
     handles = guidata(hObject);
 
@@ -426,6 +502,50 @@ function openDicom(hObject, eventdata)
         dirPath = uigetdir(handles.data.dicomImagePath, 'Select Patient''s Folder');
     else
         dirPath = uigetdir('Select Patient''s Folder');
+    end
+
+    if dirPath
+
+        %Display Wait window
+        figObj = createLogFrame();
+        displayLog(figObj, sprintf('%s', 'Searching patient data files...'), 0)
+
+        set(handles.gui.mainFig,'Pointer','watch'); drawnow('expose');
+
+        % Look for available CT,mask and PET files
+        [mask,ct,pet]=find_files(dirPath,{},[],[]);
+        
+        %Close log frame
+        close(figObj)
+
+        % Now load CT, mask and PET
+        % TODO no data found case
+        if ~isempty(ct)
+           openDicom(hObject, [], fileparts(ct)) 
+        end
+        % TODO case with more than one possible mask
+        if ~isempty(mask)
+            [folder name ext] = fileparts(mask{1});
+            openMask(hObject, [], [name ext], [folder filesep])
+        end
+        if ~isempty(pet)
+            openDicom(hObject, [], fileparts(pet)) 
+        end
+            
+        set(handles.gui.mainFig,'Pointer','arrow'); drawnow('expose');
+    end
+end
+
+function openDicom(hObject, eventdata, dirPath)
+
+    handles = guidata(hObject);
+
+    if ~exist('dirPath','var')
+        if isfield(handles, 'data')
+            dirPath = uigetdir(handles.data.dicomImagePath, 'Select Patient''s Dicom Folder');
+        else
+            dirPath = uigetdir('Select Patient''s Dicom Folder');
+        end
     end
 
     if dirPath
@@ -452,8 +572,29 @@ function openDicom(hObject, eventdata)
                 completeFileName = [dirPath filesep fileName];
                 %Try to discover if files without extension are Dicom files
                 try
-                    handles.data.metadata = dicominfo(completeFileName);
-                    info = dicom_read_header(completeFileName);
+                    info = dicominfo(completeFileName); %%% -- INFO -- I changed the info and handles.data.metadata, because I think this way makes more sense and I need to check is it is a PET image to know were to put the data
+                    
+                    handles.gui.petDisplay = strcmpi(info.Modality,'pt');
+                    if handles.gui.petDisplay
+                        % using the string field name we do not need to
+                        % repeat this if in each instance
+                        fieldname = 'dataPET';
+                    else
+                        fieldname = 'data';
+                    end
+                    
+                    handles.(fieldname).metadata = dicom_read_header(completeFileName);
+                    
+                    %%% -- INFO -- I used a random dicom file I had and it
+                    %%% didn't have the WindowCenter and WindowWidth
+                    %%% infomation - I included the following lines to
+                    %%% garantee
+                    if ~isfield(info,'WindowWidth')
+                        handles.data.metadata.WindowWidth = 1400; % 1400 is a common value used to visualize lung in CT
+                    end
+                    if ~isfield(info,'WindowCenter')
+                        handles.data.metadata.WindowCenter = -600; % -600 is a common value used to visualize lung in CT
+                    end
 
                     found = true;
                 catch
@@ -464,20 +605,43 @@ function openDicom(hObject, eventdata)
             end
         end
 
-        dicomImage = int16(dicom_read_volume(info));
+        dicomImage = single(dicom_read_volume(handles.(fieldname).metadata)); %% -- INFO -- for the PET data we can not use int, it will need more memory, but we need single for calculation too
 
+        if strcmpi(handles.(fieldname).metadata.Manufacturer,'siemens')
+            % Siemens data can have different slopes and intercepts for each
+            % slice (at least in data from Pettsburg)
+            handles.(fieldname).metadata.RescaleSlope = zeros([1,1,numel(handles.(fieldname).metadata.Filenames)]);
+            handles.(fieldname).metadata.RescaleIntercept = zeros([1,1,numel(handles.(fieldname).metadata.Filenames)]);
+            for idx = 1:numel(handles.(fieldname).metadata.Filenames)
+                aux = dicominfo(handles.(fieldname).metadata.Filenames{idx});
+                handles.(fieldname).metadata.RescaleSlope(idx) = single(aux.RescaleSlope);
+                handles.(fieldname).metadata.RescaleIntercept(idx) = single(aux.RescaleIntercept);
+            end
+        end
+        
         if isfield(info, 'RescaleSlope')
-            dicomImage = dicomImage * info.RescaleSlope;
+            dicomImage = bsxfun(@times,dicomImage,single(handles.(fieldname).metadata.RescaleSlope)); % bsxfun expandes the singleton dimension automaticaly
         end
 
         if isfield(info, 'RescaleIntercept')
-            dicomImage = dicomImage + info.RescaleIntercept;
+            dicomImage = bsxfun(@plus,dicomImage,single(handles.(fieldname).metadata.RescaleIntercept));
         end
 
+        % If a PET image was loaded maybe the user want to analyse PET and
+        % CT together. For this CT must be converted to PET resolution.       
+        if handles.gui.petDisplay && isfield(handles,'data')
+            displayLog(figObj, sprintf('%s', 'Converting other data to PET resolution...'), 1)
+            map = CTPET_CreateMap(handles.data.metadata,handles.dataPET.metadata);
+            handles.dataPET.CT = CTPET_ApplyMap(handles.data.dicomImage,map);
+            % if a mask also exist, it should be converted too
+            if isfield(handles.data,'masks')
+                handles.dataPET.masks = CTPET_ApplyMap(handles.data.masks,map);
+            end
+        end
+        
         set(handles.gui.mainFig,'Pointer','arrow'); drawnow('expose');
 
-
-        handles.data.dicomImage = dicomImage;
+        handles.(fieldname).dicomImage = dicomImage;
 
         %Set the Window Width and Window Center
         handles = calculateWindowWidthAndCenter(handles);
@@ -485,23 +649,41 @@ function openDicom(hObject, eventdata)
         configureSliders(handles)
 
         %Display First Slice
-        handles = displayCurrentDicom(handles, dicomImage, 1);
+        cla(handles.gui.navigationAxes)
+        if handles.gui.petDisplay
+            if isfield(handles.dataPET,'CT')
+                handles = createDisplayDicom(handles, handles.dataPET.CT, 1);
+                set(handles.gui.petChk,'Enable','on')
+            end
+            set(handles.gui.toSUV,'Enable','on')
+        else
+            handles = createDisplayDicom(handles, dicomImage, 1);
+            set(handles.gui.petChk,'Enable','off')
+        end
 
         %Display Patients Information
-        refreshPatientsInfo(handles, info)
+        refreshPatientsInfo(handles, handles.(fieldname).metadata)
 
         %Update Interface Appearene
         hideShowImageInformation(handles, 'On')
         hideShowSideBar(handles, 'On')
         set(handles.gui.openMaskMenu, 'Enable', 'On')
+        set(handles.gui.saveDataMenu, 'Enable', 'On')
+        set(handles.gui.closePatientMenu, 'Enable', 'On')
 
         %Create a variable to store the Image folder. This way the Masks
         %could be easier located.
-        handles.data.dicomImagePath = dirPath;
+        handles.(fieldname).dicomImagePath = dirPath;
 
-        set(handles.gui.navigationAxes, 'Clim',...
-            [handles.data.displayLow, handles.data.displayHigh])
+        % -- INFO -- This is redundant with createDisplayDicom
+% %         set(handles.gui.navigationAxes, 'Clim',...
+% %             [handles.data.displayLow, handles.data.displayHigh])
 
+        % Create the saved field as true, because if the user just load
+        % files the data should not be saved before close. Every data
+        % processing function should change saved to false
+        handles.saved = 1;
+        
         guidata(hObject, handles)
 
         %Close log frame
@@ -509,11 +691,13 @@ function openDicom(hObject, eventdata)
     end
 end
 
-function openMask(hObject, eventdata)
+function openMask(hObject, eventdata, FileName, PathName)
 
 handles = guidata(hObject);
-[FileName PathName] = uigetfile('*.hdr',...
-    'Select the file containing the masks', handles.data.dicomImagePath);
+if ~exist('FileName','var')
+    [FileName PathName] = uigetfile('*.hdr;*.nrrd',...
+        'Select the file containing the masks', handles.data.dicomImagePath);
+end
 
 if FileName
 
@@ -521,22 +705,130 @@ if FileName
     figObj = createLogFrame();
     displayLog(figObj, sprintf('%s', 'Loading Masks...'), 0)
 
+    set(handles.gui.mainFig,'Pointer','watch'); drawnow('expose');
+    
     handles = guidata(hObject);
     fileName = [PathName FileName];
-    masks = analyze75read(fileName);
-    handles.data.masks = masks;
-    guidata(hObject, handles)
+    if strfind(FileName,'hdr')
+        masks = analyze75read(fileName);
+    else
+        masks = nrrd_read(fileName);
+    end
+    
+    % Masks created in 3D Slicer using CIP plugin are labeled, ask user
+    % wich labels he wants to load
+    if any(masks(:)>255);
+        labels = unique(masks(:)); labels = labels(2:end); % exclude 0 fram list of labels
+        list = interpretCIPCodes(labels);
+        h=lungeDlg('msgbox',{'You opened a labeld mask file.';'Use the next window to choose structure you want to keep!'},'Instruction!!!','help','modal');
+        %msgbox({'You opened a labeld mask file.';'Use the next window to choose structure you want to keep!'},'Instruction!!!','help','modal');
+        uiwait(h);
+        chosen = lungeDlg('listdlg','ListString',list,'Name','Structures to keep');
+        %listdlg('ListString',list,'Name','Structures to keep');
+        notchosen = 1:numel(labels);
+        notchosen=notchosen(~ismember(notchosen,chosen));
+        for each=notchosen
+            masks(masks==labels(each))=0;
+        end
+    end
+    
+    % Mask is converted to logical to reduce memory size
+    handles.data.masks = logical(masks);
+    
+    % If there is a PET image loaded and the mask is not of the same
+    % size as PET, convert it
+    if isfield(handles,'dataPET')
+        if ~all(size(handles.dataPET.dicomImage) == size(masks))
+            map = CTPET_CreateMap(handles.data.metadata,hnadles.dataPET.metadata);
+            handles.dataPET.masks = CTPET_ApplyMap(handles.data.masks,map);
+        end
+    end
 
+    set(handles.gui.mainFig,'Pointer','arrow'); drawnow('expose');
+    
+    guidata(hObject, handles)
 
     %UPDATE MENU
     set(handles.gui.massAndVolumeCalculation, 'Enable', 'On')
     set(handles.gui.p15Calculation, 'Enable', 'On')
+    set(handles.gui.maskChk, 'Enable', 'On')
 
     %Close wait window
     close(figObj);
 
 end
 
+end
+
+function saveData(hObject, eventdata)
+
+    handles = guidata(hObject);
+
+    if ~isfield(handles.data,'fileName')
+        [filename, pathname] = uiputfile('*.mat', 'Chose filename');
+        if isequal(filename,0) || isequal(pathname,0)
+            return
+        else
+            handles.data.fileName = fullfile(pathname, filename);
+        end
+    end
+    
+    %Display Wait window
+    figObj = createLogFrame();
+    displayLog(figObj, sprintf('%s', 'Saving data...'), 0)
+    
+    data = handles.data;
+    save(handles.data.fileName,'-struct','data')
+    if isfield(handles,'dataPET')
+        data = handles.dataPET;
+        save(handles.data.fileName,'-struct','data','-append')
+    end
+    set(handles.gui.saveDataMenu,'Enable','Off')
+
+    %Close wait window
+    close(figObj);
+    
+    guidata(hObject,handles)
+end
+
+function closePatient(hObject, eventdata)   
+
+    handles = guidata(hObject);
+    
+    set(handles.gui.mainFig,'Pointer','watch'); drawnow('expose');
+    
+    if ~handles.saved
+        % Ask if want to save
+        btn = lungeDlg('questdlg','You have unsaved data. Want to save before close this patient?','Save','yes','no', 'yes');
+        %questdlg('You have unsaved data. Want to save before close this patient?','Save','yes','no', 'yes');
+        
+        if strcmp(btn,'yes')
+            saveData(hObject)
+        end    
+    end
+    handles = rmfield(handles,'data');
+    if isfield(handles,'dataPET')
+       handles = rmfield(handles,'dataPET');
+    end
+    
+    % Hide patient information and DICOM display
+    hideShowImageInformation(handles,'off')
+    cla(handles.gui.navigationAxes)
+    set(handles.gui.navigationAxes,'color','k')
+       
+    %UPDATE MENU
+    set(handles.gui.massAndVolumeCalculation, 'Enable', 'Off')
+    set(handles.gui.p15Calculation, 'Enable', 'Off')
+    set(handles.gui.toSUV, 'Enable', 'Off')
+    set(handles.gui.maskChk, 'Enable', 'Off')
+    set(handles.gui.petChk, 'Enable', 'Off')
+    set(handles.gui.openMaskMenu, 'Enable', 'Off')
+    set(handles.gui.closePatientMenu, 'Enable', 'Off')
+    set(handles.gui.saveDataMenu,'Enable','Off')
+    
+    set(handles.gui.mainFig,'Pointer','arrow'); drawnow('expose');
+    
+    guidata(hObject, handles)
 end
 
 function mouseMove(hObject, eventdata)
@@ -584,14 +876,23 @@ function windowWidthCallback(hObject, eventdata)
     windowWidth = get(handles.gui.windowWidthSlider, 'Value');
     windowCenter = get(handles.gui.windowCenterSlider, 'Value');
 
-    set(handles.gui.windowWidthText, 'String',sprintf('%.2f', windowWidth));
-    handles = calculateWindowWidthAndCenter(handles,...
-        windowWidth, windowCenter);
+    if isfield(handles,'data') %%% -- INFO -- if you try to use the sliders before load data there was an error. Other option is to start with disabled sliders
+        set(handles.gui.windowWidthText, 'String',sprintf('%.2f', windowWidth));
+        handles = calculateWindowWidthAndCenter(handles,...
+            windowWidth, windowCenter);
 
-    set(handles.gui.navigationAxes, 'Clim', [handles.data.displayLow handles.data.displayHigh])
-
+        set(handles.gui.navigationAxes, 'Clim', [handles.data.displayLow handles.data.displayHigh])
+    end
     guidata(hObject, handles);
 
+end
+
+function windowWidthTextCallback(hObject, eventdata)
+    handles = guidata(hObject);
+    windowWidth = str2double(get(hObject, 'String'));
+    set(handles.gui.windowWidthSlider, 'Value',windowWidth);
+    
+    windowCenterCallback(hObject)
 end
 
 function windowCenterCallback(hObject, eventdata)
@@ -599,32 +900,83 @@ function windowCenterCallback(hObject, eventdata)
     windowWidth = get(handles.gui.windowWidthSlider, 'Value');
     windowCenter = get(handles.gui.windowCenterSlider, 'Value');
 
-    set(handles.gui.windowCenterText, 'String',sprintf('%.2f', windowCenter));
-    handles = calculateWindowWidthAndCenter(handles, windowWidth, windowCenter);
+    if isfield(handles,'data') %%% -- INFO -- if you try to use the sliders before load data there was an error. Other option is to start with disabled sliders
+        set(handles.gui.windowCenterText, 'String',sprintf('%.2f', windowCenter));
+        handles = calculateWindowWidthAndCenter(handles, windowWidth, windowCenter);
 
-    set(handles.gui.navigationAxes, 'Clim', [handles.data.displayLow handles.data.displayHigh])
-
+        set(handles.gui.navigationAxes, 'Clim', [handles.data.displayLow handles.data.displayHigh])
+    end
     guidata(hObject, handles);
 
+end
+
+function windowCenterTextCallback(hObject, eventdata)
+    handles = guidata(hObject);
+    windowCenter = str2double(get(hObject, 'String'));
+    set(handles.gui.windowCenterSlider, 'Value',windowCenter);
+    
+    windowCenterCallback(hObject)
 end
 
 function resetWindowWidthCenter(hObject, eventdata)
     handles = guidata(hObject);
 
-    windowWidth = handles.data.metadata.WindowWidth(1);
-    windowCenter = handles.data.metadata.WindowCenter(1);
+    if isfield(handles,'data') %%% -- INFO -- if you try to use the button before load data there was an error. Other option is to start with disabled button
+        windowWidth = handles.data.metadata.WindowWidth(1);
+        windowCenter = handles.data.metadata.WindowCenter(1);
 
-    handles = calculateWindowWidthAndCenter(handles, windowWidth, windowCenter);
-    set(handles.gui.navigationAxes, 'Clim', ...
-        [handles.data.displayLow, handles.data.displayHigh]);
-    set(handles.gui.windowWidthSlider, 'Value', windowWidth);
-    set(handles.gui.windowCenterSlider, 'Value', windowCenter);
+        handles = calculateWindowWidthAndCenter(handles, windowWidth, windowCenter);
+        set(handles.gui.navigationAxes, 'Clim', ...
+            [handles.data.displayLow, handles.data.displayHigh]);
+        set(handles.gui.windowWidthSlider, 'Value', windowWidth);
+        set(handles.gui.windowWidthText, 'String',sprintf('%.2f', windowWidth));
+        set(handles.gui.windowCenterSlider, 'Value', windowCenter);
+        set(handles.gui.windowCenterText, 'String',sprintf('%.2f', windowCenter));
+    end
     guidata(hObject, handles)
 
 end
 
 function hideShowSideBar(handles, hideOrShow)
     set(handles.gui.sideBarMainPanel, 'Visible', hideOrShow)
+end
+
+function maskChkCallback(hObject, eventdata)
+    handles = guidata(hObject);
+    if get(hObject,'Value')
+        set(handles.gui.petChk,'enable','off')
+        if handles.gui.petDisplay
+            handles.gui.overlayPlot = createOverlay(handles.dataPET.masks,handles);
+        else
+            handles.gui.overlayPlot = createOverlay(handles.data.masks,handles);
+        end
+    else
+        if handles.gui.petDisplay
+            set(handles.gui.petChk,'enable','on')
+        end
+        if ishandle(handles.gui.overlayPlot)
+            set(handles.gui.overlayPlot,'visible','off')
+        end
+    end
+    
+    guidata(hObject,handles)
+end
+
+function petChkCallback(hObject, eventdata)
+    handles = guidata(hObject);
+    if get(hObject,'Value')
+        if handles.gui.petDisplay
+            set(handles.gui.maskChk,'enable','off')
+            handles.gui.overlayPlot = createOverlay(handles.dataPET.dicomImage,handles);
+        end
+    else
+        set(handles.gui.maskChk,'enable','on')
+        if ishandle(handles.gui.overlayPlot)
+            set(handles.gui.overlayPlot,'visible','off')
+        end
+    end
+    
+    guidata(hObject,handles)
 end
 
 function hideShowImageInformation(handles, hideOrShow)
@@ -643,8 +995,10 @@ function sliceRangeFromToCallback(hObject, eventdata)
     try
         validateSliceRangeValues(handles, fromRange, toRange, totalNumberOfSlices)
     catch
-        errordlg('Some error ocurred in the Slice Range configuration!',...
+        lungeDlg('errordlg','Some error ocurred in the Slice Range configuration!',...
         'SliceRangeError');
+%         errordlg('Some error ocurred in the Slice Range configuration!',...
+%         'SliceRangeError');
     end
 end
 
@@ -670,10 +1024,88 @@ function validateSliceRangeValues(handles, fromValue, toValue,...
      end
 end
 
+function overlayPlot = createOverlay(Img,handles)
+    %Get the current Slice
+    currentSlicePositionString = get(handles.gui.slicePositionTag, 'String');
+    tempSlicePosition = regexp(currentSlicePositionString, '/', 'split');
+    slicePosition = str2double(tempSlicePosition(1));
+        
+    set(handles.gui.navigationAxes,'NextPlot','add')
+    if islogical(Img);
+        C = contours(Img(:,:,slicePosition),1);
+        C(:,C(1,:)==0.5)=nan;
+        if isempty(C)
+            C=zeros(2,1);
+        end
+        overlayPlot = plot(handles.gui.navigationAxes,C(1,:),C(2,:),'color','g','linewidth',2);
+    else
+        Img = Img(:,:,slicePosition);
+        M=max(Img(:));
+        if M
+            Img = round(255*Img./M);
+        end
+        Img(Img<0) = 0;
+        overlayPlot=imshow(label2rgb(Img,hot(256)),'Parent',handles.gui.navigationAxes);
+        set(overlayPlot,'alphadata',0.2*ones(size(Img,2),size(Img,1)))
+    end
+end
+
+function refreshOverlay(Img,handles)
+    %Get the current Slice
+    currentSlicePositionString = get(handles.gui.slicePositionTag, 'String');
+    tempSlicePosition = regexp(currentSlicePositionString, '/', 'split');
+    slicePosition = str2double(tempSlicePosition(1));
+    
+    if islogical(Img);
+        C = contours(Img(:,:,slicePosition),1);
+        C(:,C(1,:)==0.5)=nan;
+        set(handles.gui.overlayPlot,'xdata',C(1,:),'ydata',C(2,:))
+    else
+        Img = Img(:,:,slicePosition);
+        Img(Img<0) = 0;
+        M=max(Img(:));
+        if M
+            Img = round(255*Img./M);
+        end
+        set(handles.gui.overlayPlot,'cdata',label2rgb(Img,hot(256)))
+    end
+end
+
+function toSUV(hObject, eventdata)
+    handles = guidata(hObject);
+    
+    set(handles.gui.mainFig,'Pointer','watch'); drawnow('expose');
+    
+    % Convert raw PET data to SUV
+    handles.dataPET.imageRaw = handles.dataPET.dicomImage; % save raw data information
+    handles.dataPET.metadata.Units_raw = handles.dataPET.metadata.Units; % save raw data units information
+    injectionTime = str2sec(handles.dataPET.metadata.RadiopharmaceuticalInformationSequence.Item_1.RadiopharmaceuticalStartTime);
+    injectionDose = handles.dataPET.metadata.RadiopharmaceuticalInformationSequence.Item_1.RadionuclideTotalDose;
+    injectionHalflife = handles.dataPET.metadata.RadiopharmaceuticalInformationSequence.Item_1.RadionuclideHalfLife;
+    patientWeight = handles.dataPET.metadata.PatientWeight*1000; % converted from kg to g
+    
+    imageStartTime = str2sec(handles.dataPET.metadata.AcquisitionTime)-injectionTime; % start of image aquisiton relative to ijection time
+    frameDuration = handles.dataPET.metadata.ActualFrameDuration/1000; % converted from ms to s
+    
+    lambda = log(2)/injectionHalflife;
+    decayCorrection = exp(lambda*imageStartTime)*lambda*frameDuration/...
+        (1-exp(-lambda*frameDuration)); % convert image to injection time
+    
+    handles.dataPET.dicomImage = handles.dataPET.imageRaw*(decayCorrection*patientWeight/injectionDose); % PET data converted to SUV
+    handles.dataPET.metadata.Units = 'SUV';
+
+    % Update menu
+    set(handles.gui.toSUV,'Enable','off')
+    
+    set(handles.gui.mainFig,'Pointer','arrow'); drawnow('expose');
+    
+    guidata(hObject, handles)
+end
+
 %%%%%%%%%%%%% ANALYSIS CALLBACKS %%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function massAndVolumeCalculation(hObject, eventdata)
+function massAndVolumeCalculation(hObject, eventdata, showFig)
 
     %disply calculation log.
     figObj = createLogFrame();
@@ -822,11 +1254,21 @@ function massAndVolumeCalculation(hObject, eventdata)
     massAndVolumeResults.percentualNonMassPerSlice = percentualNonMassPerSlice;
 
 
-
     %Close log frame.
     close(figObj)
 
-    massAndVolumeResultsFrame(massAndVolumeResults)
+    % Update menu
+    set(handles.gui.saveDataMenu,'Enable','on')
+    handles.saved = 0;
+    
+    handles.data.massAndVolumeResults = massAndVolumeResults;
+    guidata(hObject,handles)
+    
+    % -- INFO -- additional variable show will facilitated the
+    % implementation of batch processing, preventing the new figure pop-up
+    if ~exist('show','var')
+        massAndVolumeResultsFrame(massAndVolumeResults)
+    end
 
 end
 
@@ -842,7 +1284,20 @@ end
 
 function lungWithMask = applyMaskToLung(lung, masks)
     lung(masks == 0) = 10000;
-    lungWithMask = double(lung);
+    
+    % crop the image to the lung mask bouding box
+    % x-y plane
+    plane = sum(masks,3);
+    lTop = find(sum(plane,2),1,'first');
+    lBottom = find(sum(plane,2),1,'last')';
+    lLeft = find(sum(plane,1),1,'first');
+    lRight = find(sum(plane,1),1,'last');
+    % z direction
+    z = squeeze(any(any(masks,2),1));
+    lBegin = find(z,1,'first');
+    lEnd = find(z,1,'last');
+    
+    lungWithMask = double(lung(lTop:lBottom,lLeft:lRight,lBegin:lEnd));
 end
 
 function [hyperVolume, normallyVolume, poorlyVolume, nonVolume,...
@@ -926,8 +1381,10 @@ function voxelVolume = calculateVoxelVolume(metadata)
 
     voxelVolume = NaN;
 
-    if isfield(metadata,'SpacingBetweenSlices');
-        if isfield(metadata,'SliceThickness')
+    % -- INFO -- change the order of if conditions, the other one didn't
+    % make sense
+    if isfield(metadata,'SliceThickness')
+        if isfield(metadata,'SpacingBetweenSlices')
             voxelVolume = (metadata.PixelSpacing(1) ^ 2 * metadata.SliceThickness * 0.001) *...
                 (metadata.SpacingBetweenSlices / metadata.SliceThickness);
         else
@@ -966,6 +1423,53 @@ function displayLog(figObj, msg, clearAxes)
     drawnow
 end
 
+function out = lungeDlg(fcn,varargin)
+% This function is a wraper to all the bult-in dialog functions needed in
+% this program. It sets appearance according to the program conventions and
+% them call the correspondent function fcn
+
+% get original values of the appearance defaults
+% for uicontrols
+uibc = get(0,'DefaultUIControlBackGroundColor');
+uifc = get(0,'DefaultUIControlForeGroundColor');
+uifs = get(0,'DefaultUIControlFontSize');
+% for other figures
+bc = get(0,'defaultFigureColor');
+fc = get(0,'defaultTextColor');
+% set new values
+set(0,'DefaultUIControlBackGroundColor','k','DefaultUIControlForeGroundColor','w',...
+    'DefaultUIControlFontSize',14)
+set(0,'defaultFigureColor','k','defaultTextColor','w')
+switch fcn
+    case 'questdlg'
+        if nargin-1 == 2
+            out = questdlg(varargin{1},varargin{2});
+        elseif nargin-1 == 5
+            out = questdlg(varargin{1},varargin{2},varargin{3},...
+                varargin{4},varargin{5});
+        end
+    case 'errordlg'
+        errordlg(varargin{1},varargin{2})
+    case 'listdlg'
+        % matlab has a hard coded white background in the actual list of
+        % the listdlg, so we need to use other color for text. It doesn't
+        % resize correctly for a new fontsize, so this will not be changed
+        set(0,'DefaultUIControlForeGroundColor','b','DefaultUIControlFontSize',uifs)
+        out = listdlg(varargin{1},varargin{2},varargin{3},varargin{4});
+    case 'msgbox'
+        out = msgbox(varargin{1},varargin{2},varargin{3},varargin{4});
+    case 'waitbar'
+        % Attention waitbar need to be called from here, only when it is
+        % created. To update use the normal function
+        out = waitbar(varargin{1},varargin{2});
+        % changing the color of the progress bar (only the current one is affected)
+        set(findobj(out,'type','patch'),'facecolor','y','edgecolor','y')
+end
+% restore original default values
+set(0,'DefaultUIControlBackGroundColor',uibc,'DefaultUIControlForeGroundColor',uifc,...
+    'DefaultUIControlFontSize',uifs)
+set(0,'defaultFigureColor',bc,'defaultTextColor',fc)
+end
 
 %%%%%%%%%%%%%%%%% MASS AND VOLUME CALCULATION %%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -978,7 +1482,8 @@ function massAndVolumeResultsFrame(results)
         'MenuBar', 'None',...
         'NumberTitle', 'Off',...
         'Name', 'Mass and Volume Results',...
-        'Position', screenSize,...
+        'Units','Normalized',...
+        'Position', [0 0.03 1 0.93], ... %%% -- INFO -- in my laptop I can not see the top of the window, only after manually risize. I think it is a problem with windows, anyway a chaged the dimensions, is ok in your screen?
         'WindowButtonDownFcn', @exportAxesFigure,...
         'Tag', 'massAndVolumeFigure');
 
@@ -1393,7 +1898,8 @@ function p15ResultsFrame(lung, masks, metadata)
     figObject = figure('MenuBar', 'None',...
         'NumberTitle', 'Off',...
         'Name', 'Mass and Volume Results',...
-        'Position', screenSize,...        
+        'Units', 'Normalized',...
+        'Position', [0 0.03 1 0.93], ... %%% -- INFO -- in my laptop I can not see the top of the window, only after manually risize. I think it is a problem with windows, anyway a chaged the dimensions, is ok in your screen?
         'Tag', 'p15Figure');
 
      p15MassAxes = axes('Parent', figObject,...
@@ -1553,7 +2059,8 @@ function [pXVolume, percentualNumberOfVoxels, huRange] = calculatePX(lung,...
                 massPerDensity = zeros(1, nClasses);
                 percentualNumberOfVoxels = zeros(1, nClasses);
                 volumePerDensity = zeros(1, nClasses);
-                h = waitbar(0, 'Calculating P15...');
+                h = lungeDlg('waitbar',0, 'Calculating P15...');
+                %waitbar(0, 'Calculating P15...');
                 for hu = 1:nClasses
                     nVoxels = length(lung(lung == huRange(hu)));
                     percentualNumberOfVoxels(hu) = nVoxels / lungTotalVoxels;
@@ -1605,7 +2112,7 @@ function setPXTextResults(handles, newPValue, pXVolume, volume, mass, density)
 end
 
 function pXValue = closerPXValue(percentualIndice, huRange, newPValue)
-    [~, pXPosition] = min(abs(percentualIndice -  newPValue));
+    [void, pXPosition] = min(abs(percentualIndice -  newPValue)); %%% -- INFO -- changed ~ to void in the function output to be compatible with old matlab versions
     pXValue = huRange(pXPosition);
 end
 
@@ -1614,10 +2121,295 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
+%%%%%%%%%%%%%%%%% USEFULL FUNCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function names = interpretCIPCodes(labels)
+    % Transform labels from a CIP generated mask in name of structures
+    
+    % convert labels to type
+    types = bitshift(uint16(labels),-8);
+    
+    % convert lables to region
+    regions = uint16(labels) - bitshift(types,8);
+    
+    % edit the next to variables to add or remove types and regions
+    % see CIP code top complete list
+    listTypes   = {[0, 1, 2, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48];... codes
+                   {'Undefined','Normal Parenchyma','Airway','Trachea','Main Bronchus','Upper Lobe Bronchus',... name
+                   'Airway Generation 3','Airway Generation 3','Airway Generation 4','Airway Generation 5','Airway Generation 6',... name
+                   'Airway Generation 7','Airway Generation 8','Airway Generation 9','Airway Generation 10'}};% name
+    listRegions = {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];... codes
+                   {'','Whole Lung','Rigth Lung','Left Lung','Right Superior Lobe','Right Middle Lobe','Right Inferior Lobe',... name
+                   'Left Superior Lobe','Left Middle Lobe','Left Inferior Lobe','Left Upper Third','Left Middle Third',... name
+                   'Left Lower Third','Right Upper Third','Right Middle Third','Right Lower Third'}};% name
+    
+    names = cell(1,numel(labels));
+    for idx=1:numel(labels)
+        names{idx} = [char(listTypes{2}(listTypes{1}==types(idx))) ' - ' char(listRegions{2}(listRegions{1}==regions(idx)))];
+    end
+end
+
+function [h,ct,pet]=find_files(folder,h,ct,pet)
+% Recursively search for data files in patient folder and return a list of
+% masks, ct and pet files
+    list = dir(folder);
+
+    d=list([list.isdir]);
+    d={d.name};
+    d=d(~strncmp(d,'.',1));
+    list=list(~[list.isdir]);
+    for i=1:length(list)
+        [lixo,name,ext] = fileparts(list(i).name);
+        if strcmp(ext,'.hdr') || strcmp(ext,'.nrrd')
+            h{end+1} = fullfile(folder,[name ext]);
+        elseif strncmp('0001',name,4) ||...
+                (~isempty(strfind(name,'dcm')) && ~isempty(name)) ||...
+                strcmp('.dcm',ext)
+            file = fullfile(folder,[name ext]);
+            info = dicominfo(file);
+            switch lower(info.Modality)
+                case 'ct'
+                    ct = file;
+                case 'pt'
+                    pet = file;
+            end
+            break
+        end
+    end
+
+    for i=1:numel(d)
+        folder2 = fullfile(folder,d{i});
+        [h,ct,pet] = find_files(folder2,h,ct,pet);
+    end
+end
+
+function MapVectors = CTPET_CreateMap(ImgHeader_1,ImgHeader_2,crop)
+% This function is a CT_Processing2 version of OV2_MakeMapVestors
+
+% Summary of modifications:
+%   - the inputs are now the image headers
+%   - the mapvector struct is an output and is not saved in a mat file
+%       - a lot of saving things were cutted out
+%   - the slice Z dimension is defined by PixelDimensions and SpacingBetweenSlices
+
+    % -- assign hiRes and lowRes labels -- NOTE: not all DICOM labels are consistent in PET and CT image: both PET and CT images have some specific DICOM labels
+    if ImgHeader_1.PixelSpacing(1) < ImgHeader_2.PixelSpacing(1),
+        hiRes_ImgHeader = ImgHeader_1;
+        lowRes_ImgHeader = ImgHeader_2;
+    else
+        hiRes_ImgHeader = ImgHeader_2;
+        lowRes_ImgHeader = ImgHeader_1;
+    end
+    if isfield(hiRes_ImgHeader,'NumberOfSlices')
+        hiRes_ImgHeader.NumberOfSlices = double( hiRes_ImgHeader.NumberOfSlices);
+    else
+        hiRes_ImgHeader.NumberOfSlices = numel(hiRes_ImgHeader.Filenames);% get number of slices from dcm files inside the folder (note that it only works for aquisitions with one frame)
+    end
+
+    % -- convert type of DICOM parameter to MATLAB's default type 'double' UNLESS OV2_GetDicomInfo does the conversion in the future!!!
+    if isfield(lowRes_ImgHeader,'NumberOfSlices')
+        lowRes_ImgHeader.NumberOfSlices = double( lowRes_ImgHeader.NumberOfSlices);
+    else
+        lowRes_ImgHeader.NumberOfSlices = numel(lowRes_ImgHeader.Filenames);% get number of slices from dcm files inside the folder (note that it only works for aquisitions with one frame)
+    end
+    % consistent conservative style access for ALL numerical paramters of the structure: convert to double even if the parameter was converted before (unless OV2_GetDicomInfo is changed)
+
+    % -- create mapping vectors
+    % NOTES ABOUT DICOM
+    % constants for accessing x, y and z in the ImagePositionPatient vector
+    sel_x = 1;
+    sel_y = 2;
+    sel_z = 3;
+
+    % if ~isfield(hiRes_ImgHeader,'SpacingBetweenSlices')
+    % Always recalculate, because we must keep thw sign
+        info1 = dicominfo(hiRes_ImgHeader.Filenames{1});
+        info2 = dicominfo(hiRes_ImgHeader.Filenames{2});
+        if isfield(hiRes_ImgHeader,'SliceLocation')
+            hiRes_ImgHeader.SpacingBetweenSlices = info1.SliceLocation-info2.SliceLocation;
+        else
+            hiRes_ImgHeader.SpacingBetweenSlices = info1.ImagePositionPatient(sel_z)-info2.ImagePositionPatient(sel_z);
+        end
+    % end
 
 
+    % if ~isfield(lowRes_ImgHeader,'SpacingBetweenSlices')
+    % Always recalculate, because we must keep thw sign
+        info1 = dicominfo(lowRes_ImgHeader.Filenames{1});
+        info2 = dicominfo(lowRes_ImgHeader.Filenames{2});
+        if isfield(lowRes_ImgHeader,'SliceLocation')
+            lowRes_ImgHeader.SpacingBetweenSlices = info1.SliceLocation-info2.SliceLocation;
+        else
+            lowRes_ImgHeader.SpacingBetweenSlices = info1.ImagePositionPatient(sel_z)-info2.ImagePositionPatient(sel_z);
+        end
+    % end
 
+    % -- make vector for z direction
+    % start with z because it has the lowest number of steps and the largest vectorized voxel reduction per step
+    % DICOM NOTE for z-axis: the slice location increases in negative direction
+    % with an increase in the slice number
+    if exist('crop','var')
+        hiRes_len_z = crop(6) - crop(5) + 1;
+    else
+        hiRes_len_z = double( hiRes_ImgHeader.NumberOfSlices);
+    end
+    if isfield(hiRes_ImgHeader,'SliceLocation')
+        hiRes_origin_z = double( hiRes_ImgHeader.SliceLocation); % get origin for z direction
+    else
+        hiRes_origin_z = double( hiRes_ImgHeader.ImagePositionPatient(sel_z)); % get origin for z direction
+    end
+    hiRes_SliceSpacing = round( double( hiRes_ImgHeader.SpacingBetweenSlices)*1e4)/1e4;%round( double( hiRes_ImgHeader.opt_SliceSpacing), 4); % get true voxel size for "spacefilling matrix" -- NOTE: slice thickness in the DICOM header is bigger so it would result in false mapping vectors!
+    if exist('crop','var')
+        hiRes_origin_z = hiRes_origin_z - (crop(5)+1) * hiRes_SliceSpacing;
+    end
+    hiRes_center_z = hiRes_origin_z - hiRes_SliceSpacing * (0:hiRes_len_z-1); % NOTE: length of vector = NumberOfSlices - 1   so that the last value is the upper bound of the last slice
 
+    lowRes_len_z = double( lowRes_ImgHeader.NumberOfSlices);
+    if isfield(lowRes_ImgHeader,'SliceLocation')
+        lowRes_origin_z = double( lowRes_ImgHeader.SliceLocation); % get origin for z direction
+    else
+        lowRes_origin_z = double( lowRes_ImgHeader.ImagePositionPatient(sel_z)); % get origin for z direction
+    end
+    lowRes_SliceSpacing = round( double( lowRes_ImgHeader.SpacingBetweenSlices)*1e4)/1e4;%double( lowRes_ImgHeader.opt_SliceSpacing);
+    lowRes_VoxelEdge_z = ( lowRes_origin_z + lowRes_SliceSpacing/2) - lowRes_SliceSpacing * (0:lowRes_len_z); % VoxelEdge(i) is the upper boundary of the voxel i and VoxelEdge(i+1) is the lower boundary because of direction the slice location vector
+
+    if abs(hiRes_SliceSpacing) < abs(lowRes_SliceSpacing), % default mapping
+        MapVectors.vox_map_z = zeros( 1, hiRes_len_z);
+        for i = 1:lowRes_len_z,
+            if sign(lowRes_SliceSpacing)>0
+                MapVectors.vox_map_z( ( hiRes_center_z <= lowRes_VoxelEdge_z( i)) & ( hiRes_center_z > lowRes_VoxelEdge_z(i+1))) = i; % set slice ID of the low-res image in all hi-res voxels within the bounderies
+            else
+                MapVectors.vox_map_z( ( hiRes_center_z >= lowRes_VoxelEdge_z( i)) & ( hiRes_center_z < lowRes_VoxelEdge_z(i+1))) = i; % set slice ID of the low-res image in all hi-res voxels within the bounderies
+            end
+        end
+    else
+        hiRes_center_z_wEdges = hiRes_center_z( [1, 1:end, end]);
+        hiRes_center_z_wEdges(1) = hiRes_center_z_wEdges(1) + ( hiRes_SliceSpacing / 2);
+        hiRes_center_z_wEdges(end) = hiRes_center_z_wEdges(end) - ( hiRes_SliceSpacing / 2);
+        lowRes_center_z = lowRes_origin_z - lowRes_SliceSpacing * (0:lowRes_len_z-1); % NOTE: length of vector = NumberOfSlices - 1   so that the last value is the upper bound of the last slice
+        % NOTE 'interp1' using the method 'nearest' returns NaN for sample locations (lowRes_center_z) that are below
+        % the lowest or above the highest reference location (hiRes_center_z). In order to use the voxel's edges rather
+        % than their center points as cut off the edges are added at the ends of the hiRes_center_z vector.
+        MapVectors.vox_map_z = interp1( hiRes_center_z_wEdges, [1, 1:hiRes_len_z, hiRes_len_z], lowRes_center_z, 'nearest');
+    end
+
+    MapVectors.hiRes_SliceSpacing=hiRes_SliceSpacing;
+    MapVectors.lowRes_SliceSpacing=lowRes_SliceSpacing;
+
+    % -- make vector for x direction
+    if exist('crop','var')
+        hiRes_len_x = crop(2) - crop(1) + 1;
+    else
+        hiRes_len_x = double( hiRes_ImgHeader.Columns);
+    end
+    hiRes_PixelSpacing = double( hiRes_ImgHeader.PixelSpacing);
+    hiRes_origin_x = double( hiRes_ImgHeader.ImagePositionPatient( sel_x));
+    if exist('crop','var')
+        hiRes_origin_x = hiRes_origin_x + (crop(1)-1) * hiRes_PixelSpacing( sel_x);
+    end
+    hiRes_center_x = hiRes_origin_x + hiRes_PixelSpacing( sel_x) * (0:hiRes_len_x-1); % NOTE: length of vector = NumberOfSlices - 1   so that the last value is the upper bound of the last slice
+
+    lowRes_len_x = double( lowRes_ImgHeader.Columns);
+    lowRes_origin_x = double( lowRes_ImgHeader.ImagePositionPatient( sel_x));
+    lowRes_PixelSpacing = double( lowRes_ImgHeader.PixelSpacing);
+    lowRes_VoxelEdge_x = ( lowRes_origin_x - lowRes_PixelSpacing( sel_x) / 2) + lowRes_PixelSpacing( sel_x) * (0:lowRes_len_x); % VoxelEdge(i) is the upper boundary of the voxel i and VoxelEdge(i+1) is the lower boundary because of direction the slice location vector
+    MapVectors.vox_map_x = zeros( 1, hiRes_len_x);
+    for i = 1:lowRes_len_x,
+        MapVectors.vox_map_x( ( hiRes_center_x >= lowRes_VoxelEdge_x( i)) & ( hiRes_center_x < lowRes_VoxelEdge_x(i+1))) = i; % set all hi-res voxels within the bounderies to the ID of the low-res image
+    end
+
+    % -- make vector for y direction
+    if exist('crop','var')
+        hiRes_len_y = crop(4) - crop(3) + 1;
+    else
+        hiRes_len_y = double( hiRes_ImgHeader.Rows);
+    end
+    hiRes_origin_y = double( hiRes_ImgHeader.ImagePositionPatient( sel_y));
+    hiRes_PixelSpacing = double( hiRes_ImgHeader.PixelSpacing);
+    if exist('crop')
+        hiRes_origin_y = hiRes_origin_y + (crop(3)-1) * hiRes_PixelSpacing( sel_y);
+    end
+    hiRes_center_y = hiRes_origin_y + hiRes_PixelSpacing( sel_y) * (0:hiRes_len_y-1); % NOTE: length of vector = NumberOfSlices - 1   so that the last value is the upper bound of the last slice
+
+    lowRes_len_y = double( lowRes_ImgHeader.Rows);
+    lowRes_origin_y = double( lowRes_ImgHeader.ImagePositionPatient( sel_y));
+    lowRes_PixelSpacing = double( lowRes_ImgHeader.PixelSpacing);
+    lowRes_VoxelEdge_y = ( lowRes_origin_y - lowRes_PixelSpacing( sel_y) / 2) + lowRes_PixelSpacing( sel_y) * (0:lowRes_len_y); % VoxelEdge(i) is the upper boundary of the voxel i and VoxelEdge(i+1) is the lower boundary because of direction the slice location vector
+    MapVectors.vox_map_y = zeros( 1, hiRes_len_y);
+    for i = 1:lowRes_len_y,
+        MapVectors.vox_map_y( ( hiRes_center_y >= lowRes_VoxelEdge_y( i)) & ( hiRes_center_y < lowRes_VoxelEdge_y(i+1))) = i; % set all hi-res voxels within the bounderies to the ID of the low-res image
+    end
+
+    MapVectors.hiRes_PixelSpacing=hiRes_PixelSpacing;
+    MapVectors.lowRes_PixelSpacing=lowRes_PixelSpacing;
+
+    MapVectors.hiRes_size = [ hiRes_len_y hiRes_len_x hiRes_len_z];
+    MapVectors.lowRes_size = [ lowRes_len_y lowRes_len_x lowRes_len_z];
+
+    MapVectors.hiRes_offset = [ hiRes_origin_x, hiRes_origin_y, hiRes_origin_z];
+    MapVectors.lowRes_offset = [ lowRes_origin_x, lowRes_origin_y, lowRes_origin_z];
+end
+
+function lowRes_imdata = CTPET_ApplyMap(img,mapping)
+% This function is a CT_Processing2 version of OV2_ConvRes
+
+% Summary of modifications:
+%  - only the case with two inputs and a output is used
+%  - the OV2_images struct is not used here
+%  - the initial pixel depth is skkiped (!!!)
+
+    % ____MAIN____
+    hiRes_imdata = img;
+
+    % -- map voxels high res -> low res --
+    % - z direction -
+    lowRes_imdata = zeros( [mapping.hiRes_size(1:2) mapping.lowRes_size(3)]); % reduce one dimension at the time
+    if abs(mapping.hiRes_SliceSpacing) < abs(mapping.lowRes_SliceSpacing), % default mapping
+        for k = 1:mapping.lowRes_size(3),
+            sel = mapping.vox_map_z == k;
+            N = sum( sel);
+            if N > 0,
+                lowRes_imdata(:,:,k) = sum( hiRes_imdata(:,:, sel), 3) / sum( sel); end
+        end
+    else
+        lowRes_imdata( :, :, ~isnan( mapping.vox_map_z)) = hiRes_imdata(:,:, mapping.vox_map_z( ~isnan( mapping.vox_map_z)));
+    end
+
+    % - x direction -
+    hiRes_imdata = lowRes_imdata;
+    lowRes_imdata = zeros( [mapping.hiRes_size(1) mapping.lowRes_size(2:3)]); % reduce one dimension at the time
+    for k = 1:mapping.lowRes_size(2),
+        sel = mapping.vox_map_x == k;
+        N = sum( sel);
+        if N > 0,
+            lowRes_imdata(:,k,:) = sum( hiRes_imdata( :, sel, :), 2) / N; end
+    end
+
+    % - y direction -
+    hiRes_imdata = lowRes_imdata;
+    lowRes_imdata = zeros( [mapping.lowRes_size(1:3)]); % reduce one dimension at the time
+    for k = 1:mapping.lowRes_size(1),
+        sel = mapping.vox_map_y == k;
+        N = sum( sel);
+        if N > 0,
+            lowRes_imdata(k,:,:) = sum( hiRes_imdata( sel, :, :), 1) / N; end
+    end
+
+    if isa( img, 'logical')
+        lowRes_imdata = lowRes_imdata >= 0.5;
+    end
+end
+
+function seconds = str2sec(str)
+    % convert sting dates to seconds
+    
+    seconds = str2double(str(1:2))*3600 + ... hours
+        str2double(str(2:4))*60 + ... minutes
+        str2double(str(5:6)) + ... seconds
+        str2double(['0' str(7:end)]); % fraction of seconds
+end
+%%%%%%%%%%%%%%%%% END USEFULL FUNTIONS %%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
@@ -1695,13 +2487,15 @@ ctRange = double(max(dicomImage(:)) - min(dicomImage(:)));
 set(handles.gui.windowWidthSlider, 'Max', ctRange);
 set(handles.gui.windowWidthSlider, 'Min', 1);
 set(handles.gui.windowWidthSlider, 'Value', windowWidth);
-set(handles.gui.windowWidthSlider, 'sliderstep', [1 1] / ctRange);
+set(handles.gui.windowWidthSlider, 'sliderstep', [5 10] / ctRange); %%% -- INFO -- change in steps of one is realy boring. Changed to 5 when using the arrows and 10 when clicking the bar
+set(handles.gui.windowWidthText, 'String',sprintf('%.2f', windowWidth));
 
 %Center Configuration
 set(handles.gui.windowCenterSlider, 'Max', max(dicomImage(:)));
 set(handles.gui.windowCenterSlider, 'Min', min(dicomImage(:)));
 set(handles.gui.windowCenterSlider, 'Value', windowCenter);
-set(handles.gui.windowCenterSlider, 'sliderstep', [1 1] / ctRange);
+set(handles.gui.windowCenterSlider, 'sliderstep', [5 10] / ctRange); %%% -- INFO -- change in steps of one is realy boring. Changed to 5 when using the arrows and 10 when clicking the bar
+set(handles.gui.windowCenterText, 'String',sprintf('%.2f', windowCenter));
 end
 
 
@@ -2013,4 +2807,198 @@ end
 function data=getMyData()
 % Get data struct stored in figure
 data=getappdata(gcf,'data3d');
+end
+
+function [X] = nrrd_read(filename)
+% Modified from the below function (only X is outputed and cleaner is not used)
+%NRRDREAD  Import NRRD imagery and metadata.
+%   [X, META] = NRRDREAD(FILENAME) reads the image volume and associated
+%   metadata from the NRRD-format file specified by FILENAME.
+%
+%   Current limitations/caveats:
+%   * "Block" datatype is not supported.
+%   * Only tested with "gzip" and "raw" file encodings.
+%   * Very limited testing on actual files.
+%   * I only spent a couple minutes reading the NRRD spec.
+%
+%   See the format specification online:
+%   http://teem.sourceforge.net/nrrd/format.html
+
+% Copyright 2012 The MathWorks, Inc.
+
+try
+    % Open file.
+    fid = fopen(filename, 'rb');
+    assert(fid > 0, 'Could not open file.');
+%     cleaner = onCleanup(@() fclose(fid));
+
+    % Magic line.
+    theLine = fgetl(fid);
+    assert(numel(theLine) >= 4, 'Bad signature in file.')
+    assert(isequal(theLine(1:4), 'NRRD'), 'Bad signature in file.')
+
+    % The general format of a NRRD file (with attached header) is:
+    % 
+    %     NRRD000X
+    %     <field>: <desc>
+    %     <field>: <desc>
+    %     # <comment>
+    %     ...
+    %     <field>: <desc>
+    %     <key>:=<value>
+    %     <key>:=<value>
+    %     <key>:=<value>
+    %     # <comment>
+    % 
+    %     <data><data><data><data><data><data>...
+
+    meta = struct([]);
+
+    % Parse the file a line at a time.
+    while (true)
+
+      theLine = fgetl(fid);
+
+      if (isempty(theLine) || feof(fid))
+        % End of the header.
+        break;
+      end
+
+      if (isequal(theLine(1), '#'))
+          % Comment line.
+          continue;
+      end
+
+      % "fieldname:= value" or "fieldname: value" or "fieldname:value"
+      parsedLine = regexp(theLine, ':=?\s*', 'split','once');
+
+      assert(numel(parsedLine) == 2, 'Parsing error')
+
+      field = lower(parsedLine{1});
+      value = parsedLine{2};
+
+      field(isspace(field)) = '';
+      meta(1).(field) = value;
+
+    end
+
+    datatype = getDatatype(meta.type);
+
+    % Get the size of the data.
+    assert(isfield(meta, 'sizes') && ...
+           isfield(meta, 'dimension') && ...
+           isfield(meta, 'encoding') && ...
+           isfield(meta, 'endian'), ...
+           'Missing required metadata fields.')
+
+    dims = sscanf(meta.sizes, '%d');
+    ndims = sscanf(meta.dimension, '%d');
+    assert(numel(dims) == ndims);
+
+    data = readData(fid, meta, datatype);
+    data = adjustEndian(data, meta);
+
+    % Reshape and get into MATLAB's order.
+    X = reshape(data, dims');
+    X = permute(X, [2 1 3]);
+    
+    fclose(fid);
+catch err
+    fclose(fid);
+    rethrow(err)
+end
+end
+
+function datatype = getDatatype(metaType)
+
+% Determine the datatype
+switch (metaType)
+ case {'signed char', 'int8', 'int8_t'}
+  datatype = 'int8';
+  
+ case {'uchar', 'unsigned char', 'uint8', 'uint8_t'}
+  datatype = 'uint8';
+
+ case {'short', 'short int', 'signed short', 'signed short int', ...
+       'int16', 'int16_t'}
+  datatype = 'int16';
+  
+ case {'ushort', 'unsigned short', 'unsigned short int', 'uint16', ...
+       'uint16_t'}
+  datatype = 'uint16';
+  
+ case {'int', 'signed int', 'int32', 'int32_t'}
+  datatype = 'int32';
+  
+ case {'uint', 'unsigned int', 'uint32', 'uint32_t'}
+  datatype = 'uint32';
+  
+ case {'longlong', 'long long', 'long long int', 'signed long long', ...
+       'signed long long int', 'int64', 'int64_t'}
+  datatype = 'int64';
+  
+ case {'ulonglong', 'unsigned long long', 'unsigned long long int', ...
+       'uint64', 'uint64_t'}
+  datatype = 'uint64';
+  
+ case {'float'}
+  datatype = 'single';
+  
+ case {'double'}
+  datatype = 'double';
+  
+ otherwise
+  assert(false, 'Unknown datatype')
+end
+end
+
+
+function data = readData(fidIn, meta, datatype)
+
+switch (meta.encoding)
+ case {'raw'}
+  
+  data = fread(fidIn, inf, [datatype '=>' datatype]);
+  
+ case {'gzip', 'gz'}
+
+  tmpBase = tempname();
+  tmpFile = [tmpBase '.gz'];
+  fidTmp = fopen(tmpFile, 'wb');
+  assert(fidTmp > 3, 'Could not open temporary file for GZIP decompression')
+  
+  tmp = fread(fidIn, inf, 'uint8=>uint8');
+  fwrite(fidTmp, tmp, 'uint8');
+  fclose(fidTmp);
+  
+  gunzip(tmpFile)
+  
+  fidTmp = fopen(tmpBase, 'rb');
+%   cleaner = onCleanup(@() fclose(fidTmp));
+  
+  meta.encoding = 'raw';
+  data = readData(fidTmp, meta, datatype);
+  fclose(fidTmp)
+  
+ case {'txt', 'text', 'ascii'}
+  
+  data = fscanf(fidIn, '%f');
+  data = cast(data, datatype);
+  
+ otherwise
+  assert(false, 'Unsupported encoding')
+end
+end
+
+
+function data = adjustEndian(data, meta)
+
+[void,void,endian] = computer();
+
+needToSwap = (isequal(endian, 'B') && isequal(lower(meta.endian), 'little')) || ...
+             (isequal(endian, 'L') && isequal(lower(meta.endian), 'big'));
+         
+if (needToSwap)
+    data = swapbytes(data);
+end
 end
