@@ -647,6 +647,9 @@ function openDicom(hObject, eventdata, dirPath)
         handles = calculateWindowWidthAndCenter(handles);
 
         configureSliders(handles)
+        %Refresh Show Mask and Show PET stat
+        set(handles.gui.maskChk, 'Value', 0)
+        set(handles.gui.petChk,'Value', 0)
 
         %Display First Slice
         cla(handles.gui.navigationAxes)
@@ -739,7 +742,7 @@ if FileName
     % size as PET, convert it
     if isfield(handles,'dataPET')
         if ~all(size(handles.dataPET.dicomImage) == size(masks))
-            map = CTPET_CreateMap(handles.data.metadata,hnadles.dataPET.metadata);
+            map = CTPET_CreateMap(handles.data.metadata, handles.dataPET.metadata);
             handles.dataPET.masks = CTPET_ApplyMap(handles.data.masks,map);
         end
     end
