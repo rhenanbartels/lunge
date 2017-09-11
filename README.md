@@ -1,6 +1,8 @@
 # lunge
 [![Gitter](https://badges.gitter.im/RhenanBartels/lunge.svg)](https://gitter.im/RhenanBartels/lunge?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
+[![Join the chat at https://gitter.im/RhenanBartels/lunge](https://badges.gitter.im/RhenanBartels/lunge.svg)](https://gitter.im/RhenanBartels/lunge?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 *Software for quantitative lung image analysis*
 
 ## Requirements
